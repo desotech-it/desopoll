@@ -1,0 +1,24 @@
+[
+  {
+    "op": "add",
+    "path": "/spec/listeners/-",
+    "value": {
+      "name": "https-poll",
+      "protocol": "HTTPS",
+      "port": 443,
+      "hostname": "poll.deso.tech",
+      "tls": {
+        "mode": "Terminate",
+        "certificateRefs": [
+          { "kind": "Secret", "name": "poll-deso-tech-tls", "namespace": "desopoll" }
+        ]
+      },
+      "allowedRoutes": {
+        "namespaces": {
+          "from": "Selector",
+          "selector": { "matchLabels": { "kubernetes.io/metadata.name": "desopoll" } }
+        }
+      }
+    }
+  }
+]

@@ -2,13 +2,17 @@
 hostname: poll.deso.tech
 
 gateway:
-  name: desopoll
-  className: cilium
+  # "attach" = use an existing shared gateway (poll.deso.tech served by it);
+  # "dedicated" = create our own Gateway (needs the edge to route to its own IP).
+  mode: attach
+  name: labplatform
+  namespace: desolabs-labplatform
+  className: cilium # only used in "dedicated" mode
 
 tls:
   secretName: poll-deso-tech-tls
   # ACME issuer to use: "staging" (testing, untrusted cert) or "prod"
-  issuer: staging
+  issuer: prod
 
 acme:
   email: admin@desotech.io

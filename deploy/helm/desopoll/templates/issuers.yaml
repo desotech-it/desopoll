@@ -16,7 +16,7 @@ spec:
           gatewayHTTPRoute:
             parentRefs:
               - name: {{ .Values.gateway.name }}
-                namespace: {{ .Release.Namespace }}
+                namespace: {{ .Values.gateway.namespace }}
                 kind: Gateway
                 group: gateway.networking.k8s.io
 ---
@@ -37,6 +37,6 @@ spec:
           gatewayHTTPRoute:
             parentRefs:
               - name: {{ .Values.gateway.name }}
-                namespace: {{ .Release.Namespace }}
+                namespace: {{ .Values.gateway.namespace }}
                 kind: Gateway
                 group: gateway.networking.k8s.io
