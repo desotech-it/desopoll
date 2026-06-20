@@ -45,6 +45,8 @@ GATEWAY_INTERNAL_IP="${GATEWAY_INTERNAL_IP:-172.28.0.24}"
 SHARED_GATEWAY_NS="${SHARED_GATEWAY_NS:-desolabs-labplatform}"
 SHARED_GATEWAY="${SHARED_GATEWAY:-labplatform}"
 COREDNS_CM="${COREDNS_CM:-rke2-coredns-rke2-coredns}"
+REGISTRY_SERVER="${REGISTRY_SERVER:-r.deso.tech}"
+REGISTRY_SECRET="${REGISTRY_SECRET:-r-deso-tech}"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CHART_DIR="$HERE/helm/desopoll"
@@ -113,10 +115,28 @@ create_db_secret() {
     --dry-run=client -o yaml | kc apply -f -
 }
 
+# imagePullSecret for the PRIVATE Harbor project r.deso.tech/desopoll. Creds come from the
+# environment and are NEVER hardcoded/committed. Preferred: a Harbor ROBOT account for the
+# desopoll project (push+pull) used both in CI and here; fallback: a user's CLI secret.
+# Referenced by image.pullSecrets in values.yaml so the chart pods can pull private images.
+create_registry_secret() {
+  log "imagePullSecret $REGISTRY_SECRET ($REGISTRY_SERVER)"
+  : "${REGISTRY_USERNAME:?Set REGISTRY_USERNAME (Harbor robot name e.g. 'robot\$desopoll+ci', or a user)}"
+  : "${REGISTRY_PASSWORD:?Set REGISTRY_PASSWORD (Harbor robot token or CLI secret)}"
+  kc -n "$NAMESPACE" create secret docker-registry "$REGISTRY_SECRET" \
+    --docker-server="$REGISTRY_SERVER" \
+    --docker-username="$REGISTRY_USERNAME" \
+    --docker-password="$REGISTRY_PASSWORD" \
+    --dry-run=client -o yaml | kc apply -f -
+}
+
 # Deploy / upgrade the APP via Helm chart. Extra args are passed to helm.
+# NOTE: we pass --reset-values so the chart's values.yaml is the source of truth. Without it,
+# `helm upgrade` with no value flags REUSES the previous release's values (Helm 3 behaviour),
+# which silently keeps stale overrides (e.g. echo.enabled=true) from earlier installs.
 deploy_app() {
   log "Helm upgrade --install $RELEASE"
-  hh upgrade --install "$RELEASE" "$CHART_DIR" -n "$NAMESPACE" "$@"
+  hh upgrade --install "$RELEASE" "$CHART_DIR" -n "$NAMESPACE" --reset-values "$@"
 }
 
 verify() {
@@ -130,25 +150,29 @@ usage() {
   cat <<EOF
 desopoll deploy — usage: ./deploy/deploy.sh <command>
 
-  prereqs    [SHARED] one-time: gateway listeners + CoreDNS hosts entry (needs platform-owner OK)
-  db-secret  create/update Secret desopoll-db from \$DESOPOLL_DATABASE_URL
-  app        helm upgrade --install the chart (extra args forwarded to helm)
-  verify     show resources + external HTTPS check
-  all        prereqs -> db-secret (if \$DESOPOLL_DATABASE_URL set) -> app -> verify
+  prereqs        [SHARED] one-time: gateway listeners + CoreDNS hosts entry (needs platform-owner OK)
+  db-secret      create/update Secret desopoll-db from \$DESOPOLL_DATABASE_URL
+  registry-secret create/update the $REGISTRY_SECRET imagePullSecret from \$REGISTRY_USERNAME/\$REGISTRY_PASSWORD
+  app            helm upgrade --install the chart (extra args forwarded to helm)
+  verify         show resources + external HTTPS check
+  all            prereqs -> db-secret (if set) -> registry-secret (if set) -> app -> verify
 
-Env overrides: KUBECONFIG_FILE NAMESPACE RELEASE HOST_FQDN GATEWAY_INTERNAL_IP
-               SHARED_GATEWAY_NS SHARED_GATEWAY COREDNS_CM DESOPOLL_DATABASE_URL
+Env overrides: KUBECONFIG_FILE NAMESPACE RELEASE HOST_FQDN GATEWAY_INTERNAL_IP SHARED_GATEWAY_NS
+               SHARED_GATEWAY COREDNS_CM DESOPOLL_DATABASE_URL
+               REGISTRY_SERVER REGISTRY_SECRET REGISTRY_USERNAME REGISTRY_PASSWORD
 EOF
 }
 
 case "${1:-}" in
-  prereqs)   prereqs ;;
-  db-secret) create_db_secret ;;
-  app)       shift; deploy_app "$@" ;;
-  verify)    verify ;;
+  prereqs)         prereqs ;;
+  db-secret)       create_db_secret ;;
+  registry-secret) create_registry_secret ;;
+  app)             shift; deploy_app "$@" ;;
+  verify)          verify ;;
   all)
     prereqs
     [ -n "${DESOPOLL_DATABASE_URL:-}" ] && create_db_secret || warn "skipping db-secret (DESOPOLL_DATABASE_URL not set)"
+    [ -n "${REGISTRY_PASSWORD:-}" ] && create_registry_secret || warn "skipping registry-secret (REGISTRY_PASSWORD not set)"
     deploy_app
     verify
     ;;
