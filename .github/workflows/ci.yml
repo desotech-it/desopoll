@@ -52,7 +52,12 @@ jobs:
           if [ "${{ github.ref_type }}" = "tag" ]; then V="${{ github.ref_name }}"; V="${V#v}"; else V="${BASE}-${{ github.run_number }}"; fi
           echo "version=$V" >> "$GITHUB_OUTPUT"
       - name: Package and push chart (OCI)
+        env:
+          RU: ${{ secrets.REGISTRY_USERNAME }}
+          RP: ${{ secrets.REGISTRY_PASSWORD }}
         run: |
-          echo "${{ secrets.REGISTRY_PASSWORD }}" | helm registry login ${{ env.REGISTRY }} -u "${{ secrets.REGISTRY_USERNAME }}" --password-stdin
+          # Pass creds via env vars (not ${{ }} interpolation) so the '$' in a robot
+          # account name like robot$desopoll is NOT shell-expanded into the username.
+          printf '%s' "$RP" | helm registry login "$REGISTRY" -u "$RU" --password-stdin
           helm package deploy/helm/desopoll --version "${{ steps.ver.outputs.version }}" --app-version "${{ steps.ver.outputs.version }}"
-          helm push "desopoll-${{ steps.ver.outputs.version }}.tgz" "oci://${{ env.REGISTRY }}/${{ env.PROJECT }}/charts"
+          helm push "desopoll-${{ steps.ver.outputs.version }}.tgz" "oci://$REGISTRY/$PROJECT/charts"
