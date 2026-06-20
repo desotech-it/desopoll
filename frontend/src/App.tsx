@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 type Health = { service: string; version: string; languages: string[]; defaultLanguage: string };
+type User = { email: string; role: string; display_name: string | null };
 
 const glass: React.CSSProperties = {
   background: "rgba(255,255,255,0.5)",
@@ -9,6 +10,29 @@ const glass: React.CSSProperties = {
   border: "1px solid rgba(255,255,255,0.7)",
   borderRadius: 22,
   boxShadow: "0 24px 60px rgba(90,80,150,0.2), inset 0 1px 0 rgba(255,255,255,0.85)",
+};
+const btnPrimary: React.CSSProperties = {
+  display: "inline-block",
+  border: "none",
+  borderRadius: 14,
+  padding: "11px 22px",
+  fontSize: 14,
+  fontWeight: 600,
+  color: "#fff",
+  textDecoration: "none",
+  cursor: "pointer",
+  background: "linear-gradient(135deg,#bdb7f3,#9890ea)",
+  boxShadow: "0 12px 28px rgba(152,144,234,0.34), inset 0 1px 0 rgba(255,255,255,0.5)",
+};
+const btnGhost: React.CSSProperties = {
+  border: "1px solid rgba(255,255,255,0.8)",
+  borderRadius: 12,
+  padding: "6px 13px",
+  fontSize: 13,
+  fontWeight: 600,
+  color: "#7268c8",
+  background: "rgba(255,255,255,0.6)",
+  cursor: "pointer",
 };
 
 const shapes = [
@@ -21,13 +45,25 @@ const shapes = [
 export function App() {
   const [health, setHealth] = useState<Health | null>(null);
   const [err, setErr] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [ssoEnabled, setSsoEnabled] = useState(false);
 
   useEffect(() => {
     fetch("/api/health")
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then(setHealth)
       .catch(() => setErr(true));
+    fetch("/api/auth/config")
+      .then((r) => r.json())
+      .then((c) => setSsoEnabled(Boolean(c.oidc)))
+      .catch(() => {});
+    fetch("/api/auth/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setUser(d?.user ?? null))
+      .catch(() => {});
   }, []);
+
+  const logout = () => fetch("/api/auth/logout", { method: "POST" }).then(() => location.reload());
 
   return (
     <div
@@ -72,7 +108,7 @@ export function App() {
           ))}
         </div>
         <h1 style={{ fontSize: 34, fontWeight: 700, letterSpacing: -1, margin: "0 0 6px" }}>polling</h1>
-        <p style={{ color: "#6b6982", margin: "0 0 26px" }}>Quiz e sondaggi dal vivo</p>
+        <p style={{ color: "#6b6982", margin: "0 0 24px" }}>Quiz e sondaggi dal vivo</p>
 
         <div
           style={{
@@ -96,13 +132,25 @@ export function App() {
             }}
           />
           {health ? (
-            <span>
-              Backend attivo · v{health.version} · lingue {health.languages.join(", ")}
-            </span>
+            <span>Backend attivo · v{health.version} · lingue {health.languages.join(", ")}</span>
           ) : err ? (
             <span>Backend non raggiungibile</span>
           ) : (
             <span>Connessione al backend…</span>
+          )}
+        </div>
+
+        <div style={{ marginTop: 20 }}>
+          {user ? (
+            <div style={{ fontSize: 14 }}>
+              Accesso come <strong>{user.email}</strong>{" "}
+              <span style={{ color: "#7268c8" }}>({user.role})</span>{" "}
+              <button onClick={logout} style={btnGhost}>Esci</button>
+            </div>
+          ) : ssoEnabled ? (
+            <a href="/api/auth/login" style={btnPrimary}>Accedi con SSO</a>
+          ) : (
+            <span style={{ fontSize: 13, color: "#9a98ad" }}>SSO non ancora configurato</span>
           )}
         </div>
 

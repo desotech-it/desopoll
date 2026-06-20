@@ -1,18 +1,24 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import cors from "@fastify/cors";
+import cookie from "@fastify/cookie";
 import websocket from "@fastify/websocket";
 import type { Env } from "./env.js";
 import { db } from "./db.js";
 import { redis } from "./redis.js";
 import { type RealtimeTransport, sessionChannel } from "./realtime.js";
+import { registerAuthRoutes } from "./auth/routes.js";
 
 export async function buildServer(env: Env, realtime: RealtimeTransport): Promise<FastifyInstance> {
   const app = Fastify({ logger: { level: env.NODE_ENV === "development" ? "info" : "warn" } });
 
   await app.register(cors, {
     origin: env.CORS_ORIGINS === "*" ? true : env.CORS_ORIGINS.split(",").map((s) => s.trim()),
+    credentials: true,
   });
+  await app.register(cookie, { secret: env.SESSION_SECRET });
   await app.register(websocket);
+
+  await registerAuthRoutes(app, env);
 
   // Liveness: process is up.
   app.get("/healthz", async () => ({ status: "ok" }));

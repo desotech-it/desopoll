@@ -53,6 +53,35 @@ spec:
               value: redis://desopoll-redis:6379
             - name: CORS_ORIGINS
               value: {{ .Values.backend.corsOrigins | quote }}
+            - name: APP_BASE_URL
+              value: {{ .Values.appBaseUrl | quote }}
+            - name: SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.session.secretName }}
+                  key: secret
+{{- if .Values.oidc.enabled }}
+            - name: OIDC_ISSUER
+              value: {{ .Values.oidc.issuer | quote }}
+            - name: OIDC_REDIRECT_URI
+              value: {{ printf "%s/api/auth/callback" (.Values.appBaseUrl | trimSuffix "/") | quote }}
+            - name: OIDC_SCOPES
+              value: {{ .Values.oidc.scopes | quote }}
+            - name: OIDC_GROUPS_CLAIM
+              value: {{ .Values.oidc.groupsClaim | quote }}
+            - name: OIDC_ADMIN_GROUP
+              value: {{ .Values.oidc.adminGroup | quote }}
+            - name: OIDC_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.oidc.secretName }}
+                  key: client_id
+            - name: OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.oidc.secretName }}
+                  key: client_secret
+{{- end }}
           readinessProbe:
             httpGet:
               path: /readyz

@@ -45,6 +45,26 @@ frontend:
   enabled: true
   replicas: 1
 
+# Public base URL (used for OIDC redirect URI and post-login redirects).
+appBaseUrl: https://poll.deso.tech
+
+# Session cookie signing secret — auto-generated and persisted by the chart.
+session:
+  secretName: desopoll-session
+
+# SSO via OIDC (auth.deso.tech = Authentik). Flip enabled=true after registering the
+# OIDC application in Authentik and creating the Secret with the client credentials:
+#   kubectl -n desopoll create secret generic desopoll-oidc \
+#     --from-literal=client_id=... --from-literal=client_secret=...
+# Local email+password login stays available alongside SSO.
+oidc:
+  enabled: false
+  issuer: https://auth.deso.tech/application/o/desopoll/
+  scopes: openid email profile
+  groupsClaim: groups
+  adminGroup: "" # Authentik group name whose members become desopoll admins
+  secretName: desopoll-oidc
+
 # Database. "managed" = a dedicated CloudNativePG cluster in THIS namespace (fully
 # isolated, the operator generates the <cluster>-app secret with the connection uri).
 # "external" = use a manually-provided Secret (deploy.sh db-secret).
