@@ -7,6 +7,8 @@ import { db } from "./db.js";
 import { redis } from "./redis.js";
 import { type RealtimeTransport, sessionChannel } from "./realtime.js";
 import { registerAuthRoutes } from "./auth/routes.js";
+import { registerQuizRoutes } from "./routes/quizzes.js";
+import { registerAdminRoutes } from "./routes/admin.js";
 
 export async function buildServer(env: Env, realtime: RealtimeTransport): Promise<FastifyInstance> {
   const app = Fastify({ logger: { level: env.NODE_ENV === "development" ? "info" : "warn" } });
@@ -19,6 +21,8 @@ export async function buildServer(env: Env, realtime: RealtimeTransport): Promis
   await app.register(websocket);
 
   await registerAuthRoutes(app, env);
+  await registerQuizRoutes(app);
+  await registerAdminRoutes(app);
 
   // Liveness: process is up.
   app.get("/healthz", async () => ({ status: "ok" }));

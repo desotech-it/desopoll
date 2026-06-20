@@ -28,7 +28,8 @@ image:
   # Pushed by CI to the private r.deso.tech registry (cluster nodes can pull it natively).
   registry: r.deso.tech/desopoll
   tag: latest
-  pullPolicy: IfNotPresent
+  # 'latest' is re-pushed by CI on every main build, so Always ensures rollouts pick it up.
+  pullPolicy: Always
   # Private Harbor project → pull via this docker-registry secret (created in deploy.sh).
   pullSecrets:
     - r-deso-tech
