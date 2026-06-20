@@ -126,8 +126,9 @@ export async function registerQuizRoutes(app: FastifyInstance): Promise<void> {
     if (!b.type || !QUESTION_TYPES.includes(b.type as (typeof QUESTION_TYPES)[number])) {
       return reply.code(400).send({ error: "invalid question type" });
     }
+    // Empty prompt is allowed on create: the editor adds a draft question, then the
+    // author types the text inline (saved via PATCH). The prompt is required to host a game.
     const prompt = (b.prompt ?? "").trim();
-    if (!prompt) return reply.code(400).send({ error: "prompt required" });
     const pointsMode = POINTS_MODES.includes(b.points_mode as (typeof POINTS_MODES)[number])
       ? b.points_mode
       : "standard";
