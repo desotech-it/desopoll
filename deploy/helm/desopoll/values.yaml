@@ -25,10 +25,10 @@ echo:
 
 # Container images (built by CI, pushed to GHCR). Override registry/tag as needed.
 image:
-  registry: ghcr.io/desotech-it
+  # Pushed by CI to the private r.deso.tech registry (cluster nodes can pull it natively).
+  registry: r.deso.tech/desopoll
   tag: latest
   pullPolicy: IfNotPresent
-  # Names of imagePullSecrets if the GHCR packages are private (else make them public).
   pullSecrets: []
 
 # Dedicated Redis in this namespace: volatile live-game state + pub/sub fan-out.

@@ -24,7 +24,7 @@ spec:
       {{- end }}
       initContainers:
         - name: migrate
-          image: {{ .Values.image.registry }}/desopoll-backend:{{ .Values.image.tag }}
+          image: {{ .Values.image.registry }}/backend:{{ .Values.image.tag }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["node", "dist/migrate.js"]
           env:
@@ -35,7 +35,7 @@ spec:
                   key: uri
       containers:
         - name: backend
-          image: {{ .Values.image.registry }}/desopoll-backend:{{ .Values.image.tag }}
+          image: {{ .Values.image.registry }}/backend:{{ .Values.image.tag }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - containerPort: 8080

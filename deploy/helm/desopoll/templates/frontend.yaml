@@ -24,7 +24,7 @@ spec:
       {{- end }}
       containers:
         - name: frontend
-          image: {{ .Values.image.registry }}/desopoll-frontend:{{ .Values.image.tag }}
+          image: {{ .Values.image.registry }}/frontend:{{ .Values.image.tag }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - containerPort: 80
