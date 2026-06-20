@@ -62,6 +62,22 @@ A **liquid glass** design on a light theme: translucent panels, a pastel palette
 
 🛠️ **Implementation** — getting started.
 
+## Deployment
+
+Deployed on Kubernetes. The **app is always deployed via the Helm chart** in
+`deploy/helm/desopoll`; everything is orchestrated by `deploy/deploy.sh`, the single
+source of truth (cluster prerequisites + helm release, fully documented inline):
+
+```sh
+./deploy/deploy.sh prereqs                              # one-time shared prereqs (gateway listeners, internal DNS)
+DESOPOLL_DATABASE_URL=postgres://... ./deploy/deploy.sh db-secret
+./deploy/deploy.sh app                                  # helm upgrade --install
+./deploy/deploy.sh verify
+```
+
+Out-of-namespace prerequisites and the reasoning behind them are documented in
+[`deploy/cluster/README.md`](deploy/cluster/README.md).
+
 ## License
 
 Distributed under the terms of the [LICENSE](LICENSE) file.
