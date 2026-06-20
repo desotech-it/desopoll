@@ -29,7 +29,9 @@ image:
   registry: r.deso.tech/desopoll
   tag: latest
   pullPolicy: IfNotPresent
-  pullSecrets: []
+  # Private Harbor project → pull via this docker-registry secret (created in deploy.sh).
+  pullSecrets:
+    - r-deso-tech
 
 # Dedicated Redis in this namespace: volatile live-game state + pub/sub fan-out.
 redis:
