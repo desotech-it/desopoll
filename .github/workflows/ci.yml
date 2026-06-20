@@ -56,8 +56,8 @@ jobs:
           RU: ${{ secrets.REGISTRY_USERNAME }}
           RP: ${{ secrets.REGISTRY_PASSWORD }}
         run: |
-          # Pass creds via env vars (not ${{ }} interpolation) so the '$' in a robot
-          # account name like robot$desopoll is NOT shell-expanded into the username.
+          # Pass creds via env vars (not GitHub expression interpolation) so the literal
+          # '$' in a robot account name like robot$desopoll is not shell-expanded away.
           printf '%s' "$RP" | helm registry login "$REGISTRY" -u "$RU" --password-stdin
           helm package deploy/helm/desopoll --version "${{ steps.ver.outputs.version }}" --app-version "${{ steps.ver.outputs.version }}"
           helm push "desopoll-${{ steps.ver.outputs.version }}.tgz" "oci://$REGISTRY/$PROJECT/charts"
