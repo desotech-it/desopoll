@@ -1,0 +1,46 @@
+{{- if .Values.echo.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: desopoll-echo
+  labels:
+    app.kubernetes.io/name: desopoll-echo
+    app.kubernetes.io/part-of: desopoll
+spec:
+  replicas: {{ .Values.echo.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: desopoll-echo
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: desopoll-echo
+    spec:
+      containers:
+        - name: echo
+          image: {{ .Values.echo.image }}
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: desopoll-echo
+  labels:
+    app.kubernetes.io/name: desopoll-echo
+    app.kubernetes.io/part-of: desopoll
+spec:
+  selector:
+    app.kubernetes.io/name: desopoll-echo
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+{{- end }}

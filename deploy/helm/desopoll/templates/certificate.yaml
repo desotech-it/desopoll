@@ -1,0 +1,14 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: poll-deso-tech
+  labels:
+    app.kubernetes.io/part-of: desopoll
+spec:
+  secretName: {{ .Values.tls.secretName }}
+  dnsNames:
+    - {{ .Values.hostname | quote }}
+  issuerRef:
+    name: letsencrypt-{{ .Values.tls.issuer }}
+    kind: Issuer
+    group: cert-manager.io

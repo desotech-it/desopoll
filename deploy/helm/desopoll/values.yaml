@@ -1,0 +1,21 @@
+# Public hostname served by the dedicated Cilium Gateway
+hostname: poll.deso.tech
+
+gateway:
+  name: desopoll
+  className: cilium
+
+tls:
+  secretName: poll-deso-tech-tls
+  # ACME issuer to use: "staging" (testing, untrusted cert) or "prod"
+  issuer: staging
+
+acme:
+  email: admin@desotech.io
+
+# Temporary echo backend to validate routing + TLS before the real app is built.
+# Will be replaced by the desopoll frontend/backend in a later step.
+echo:
+  enabled: true
+  image: nginx:alpine
+  replicas: 1
