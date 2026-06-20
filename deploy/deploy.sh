@@ -22,9 +22,12 @@ set -euo pipefail
 #    resolves platform hostnames to the INTERNAL gateway IP via the `hosts` plugin in the
 #    CoreDNS Corefile ConfigMap `rke2-coredns-rke2-coredns` (kube-system). NOTE: the
 #    `coredns-custom` ConfigMap is NOT imported here and has NO effect.
-#  - Database: dedicated `desopoll` DB on the shared CNPG Postgres (no new cluster). CNPG
-#    superuser is disabled, so the DB+role must be provisioned with a privileged
-#    credential; the connection string is injected as Secret `desopoll-db`.
+#  - Database: a DEDICATED CloudNativePG cluster `desopoll-db` in THIS namespace
+#    (db.mode=managed in values). The cluster-wide CNPG operator provisions it and
+#    generates the `desopoll-db-app` Secret (uri/username/password/dbname) the backend
+#    consumes. Reusing the shared CNPG instance was not possible (its superuser is
+#    disabled and provisioning it is outside the desopoll perimeter). Set db.mode=external
+#    to instead inject an external connection via the `db-secret` subcommand.
 #  - Redis: our own instance in the desopoll namespace (chart) — volatile game state + pub/sub.
 #  - Images: built by GitHub Actions and pushed to r.deso.tech/desopoll/*.
 #

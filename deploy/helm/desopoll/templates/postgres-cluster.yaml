@@ -1,0 +1,22 @@
+{{- if eq .Values.db.mode "managed" }}
+# Dedicated PostgreSQL for desopoll, provisioned by the cluster-wide CloudNativePG
+# operator inside THIS namespace. The operator creates the "{{ .Values.db.cluster }}-app"
+# Secret (keys: username, password, dbname, host, port, uri, jdbc-uri) that the backend
+# consumes. No access to any shared database is required.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ .Values.db.cluster }}
+  labels:
+    app.kubernetes.io/part-of: desopoll
+spec:
+  instances: {{ .Values.db.instances }}
+  imageName: {{ .Values.db.image }}
+  storage:
+    size: {{ .Values.db.storageSize }}
+    storageClass: {{ .Values.db.storageClass }}
+  bootstrap:
+    initdb:
+      database: {{ .Values.db.database }}
+      owner: {{ .Values.db.owner }}
+{{- end }}

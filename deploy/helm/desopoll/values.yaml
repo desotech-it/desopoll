@@ -23,3 +23,16 @@ echo:
   enabled: true
   image: nginx:alpine
   replicas: 1
+
+# Database. "managed" = a dedicated CloudNativePG cluster in THIS namespace (fully
+# isolated, the operator generates the <cluster>-app secret with the connection uri).
+# "external" = use a manually-provided Secret (deploy.sh db-secret).
+db:
+  mode: managed
+  cluster: desopoll-db
+  instances: 1
+  image: ghcr.io/cloudnative-pg/postgresql:16
+  storageClass: longhorn
+  storageSize: 2Gi
+  database: desopoll
+  owner: desopoll
