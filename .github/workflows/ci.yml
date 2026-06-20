@@ -1,0 +1,45 @@
+name: build-and-push
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Type-check backend
+        working-directory: backend
+        run: |
+          npm install
+          npm run build
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to r.deso.tech
+        uses: docker/login-action@v3
+        with:
+          registry: r.deso.tech
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: r.deso.tech/desopoll/backend
+          tags: |
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=tag
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
