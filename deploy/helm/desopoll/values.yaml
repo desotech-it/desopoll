@@ -17,11 +17,32 @@ tls:
 acme:
   email: admin@desotech.io
 
-# Temporary echo backend to validate routing + TLS before the real app is built.
-# Will be replaced by the desopoll frontend/backend in a later step.
+# Temporary echo backend (superseded by frontend/backend below).
 echo:
-  enabled: true
+  enabled: false
   image: nginx:alpine
+  replicas: 1
+
+# Container images (built by CI, pushed to GHCR). Override registry/tag as needed.
+image:
+  registry: ghcr.io/desotech-it
+  tag: latest
+  pullPolicy: IfNotPresent
+  # Names of imagePullSecrets if the GHCR packages are private (else make them public).
+  pullSecrets: []
+
+# Dedicated Redis in this namespace: volatile live-game state + pub/sub fan-out.
+redis:
+  enabled: true
+  image: redis:7-alpine
+
+backend:
+  enabled: true
+  replicas: 1
+  corsOrigins: https://poll.deso.tech
+
+frontend:
+  enabled: true
   replicas: 1
 
 # Database. "managed" = a dedicated CloudNativePG cluster in THIS namespace (fully

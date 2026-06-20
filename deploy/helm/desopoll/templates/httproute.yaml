@@ -11,10 +11,30 @@ spec:
   hostnames:
     - {{ .Values.hostname | quote }}
   rules:
+{{- if .Values.backend.enabled }}
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api
+        - path:
+            type: PathPrefix
+            value: /ws
+      backendRefs:
+        - name: desopoll-backend
+          port: 8080
+{{- end }}
     - matches:
         - path:
             type: PathPrefix
             value: /
       backendRefs:
-        - name: {{ if .Values.echo.enabled }}desopoll-echo{{ else }}desopoll-frontend{{ end }}
+{{- if .Values.frontend.enabled }}
+        - name: desopoll-frontend
           port: 80
+{{- else if .Values.echo.enabled }}
+        - name: desopoll-echo
+          port: 80
+{{- else }}
+        - name: desopoll-backend
+          port: 8080
+{{- end }}

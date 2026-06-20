@@ -1,0 +1,90 @@
+{{- if .Values.backend.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: desopoll-backend
+  labels:
+    app.kubernetes.io/name: desopoll-backend
+    app.kubernetes.io/part-of: desopoll
+spec:
+  replicas: {{ .Values.backend.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: desopoll-backend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: desopoll-backend
+    spec:
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- range . }}
+        - name: {{ . }}
+        {{- end }}
+      {{- end }}
+      initContainers:
+        - name: migrate
+          image: {{ .Values.image.registry }}/desopoll-backend:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["node", "dist/migrate.js"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.db.cluster }}-app
+                  key: uri
+      containers:
+        - name: backend
+          image: {{ .Values.image.registry }}/desopoll-backend:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"
+            - name: NODE_ENV
+              value: production
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.db.cluster }}-app
+                  key: uri
+            - name: REDIS_URL
+              value: redis://desopoll-redis:6379
+            - name: CORS_ORIGINS
+              value: {{ .Values.backend.corsOrigins | quote }}
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 25m
+              memory: 96Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: desopoll-backend
+  labels:
+    app.kubernetes.io/name: desopoll-backend
+    app.kubernetes.io/part-of: desopoll
+spec:
+  selector:
+    app.kubernetes.io/name: desopoll-backend
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+{{- end }}
