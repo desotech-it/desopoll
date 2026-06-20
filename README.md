@@ -1,57 +1,67 @@
 # desopoll
 
-Piattaforma di **quiz e sondaggi dal vivo** self-hosted: l'host proietta le domande su uno schermo condiviso, i partecipanti rispondono dal proprio telefono entrando con un PIN, e i punteggi si aggiornano in tempo reale tra una domanda e l'altra.
+A self-hosted platform for **live quizzes and polls**: the host projects questions on a shared screen, participants answer from their own phone after joining with a PIN, and scores update in real time between questions.
 
-Pensata sia per la **formazione e le certificazioni** (domande lunghe in stile VMware VCP, AWS, ecc., con immagini e diagrammi) sia per il **coinvolgimento dal vivo** (lezioni, eventi, team building).
+Designed both for **training and certifications** (long, scenario-style questions like VMware VCP or AWS, with images and diagrams) and for **live engagement** (classes, events, team building).
 
 ---
 
-## Cosa fa
+## What it does
 
-- **Partite dal vivo con PIN** — l'host avvia una sessione e ottiene un PIN; i giocatori entrano da browser/telefono con PIN e nickname, senza bisogno di un account.
-- **Esperienza a due viste** — schermo *host* (proiettore) e schermo *giocatore* (mobile), pensati separatamente.
-- **Punteggio per accuratezza e velocità**, con classifica intermedia tra le domande e **podio finale**.
-- **Statistiche post-partita** per giocatore e per singola domanda.
+- **Live games with a PIN** — the host starts a session and gets a PIN; players join from a browser/phone with the PIN and a nickname, no account required.
+- **Two tailored views** — a *host* screen (projector) and a *player* screen (mobile), designed independently.
+- **Scoring by accuracy and speed**, with an interim leaderboard between questions and a **final podium**.
+- **Post-game analytics** per player and per question.
 
-## Tipi di domanda
+## Question types
 
-Architettura a tipi estensibili. Tipi previsti:
+Built around an extensible question-type registry. Planned types:
 
-- Scelta singola
-- Scelta multipla (più risposte corrette)
-- Vero / Falso
-- Risposta aperta (testo)
-- Numerica e slider/intervallo
-- Ordinamento (riordina)
-- Sondaggio (senza punteggio)
-- Nuvola di parole
+- Single choice
+- Multiple choice (several correct answers)
+- True / False
+- Open text answer
+- Numeric and slider/range
+- Ordering (reorder)
+- Poll (no scoring)
+- Word cloud
 
-Ogni domanda è configurabile singolarmente: **testo lungo** sempre leggibile per intero, **immagine** allegata (apribile a tutto schermo), **tempo dedicato**, **punti** (standard / doppi / nessuno) e bonus velocità.
+Every question is configured individually: **long text** always shown in full, an attached **image** (openable full screen), a **dedicated time limit**, **points** (standard / double / none) and a speed bonus.
 
-## Amministrazione e condivisione
+## Multi-language support
 
-- **Ruoli**: *Amministratore* (gestione di utenti e gruppi) e *Utente* (crea e possiede i propri poll). Principio di separazione gestione/contenuto: l'amministratore gestisce gli account ma non accede ai contenuti altrui per impostazione predefinita.
-- **Gruppi** di utenti, con gestione dei membri.
-- **Proprietà** dei poll per utente e **condivisione** verso singoli utenti o interi gruppi.
-- **Livelli di permesso** crescenti: *Sola lettura* → *Può giocare/ospitare* → *Può modificare* → *Co-proprietario*. In caso di permessi multipli (diretto e via gruppo) vale sempre il più alto.
-- **Link di partecipazione** revocabile (solo modalità gioco).
+The platform is **multilingual**, on two levels:
 
-## Interfaccia
+- **Localized interface** — the application UI is available in multiple languages.
+- **Multilingual quiz content** — a quiz can hold its questions and answers in more than one language.
+- **Language selection at game time** — when a session is launched, the presentation language is selected, and questions and answers are shown to players in the chosen language.
 
-Design **liquid glass** su tema chiaro: pannelli traslucidi, palette pastello, layout responsive ottimizzato per le due viste (host e giocatore).
+The data model keeps translations alongside each quiz/question so the same quiz can be hosted in different languages without duplicating it.
 
-## Architettura
+## Administration and sharing
 
-- **Livello real-time sostituibile**: la logica di gioco dipende da un'unica interfaccia di trasporto, con due implementazioni intercambiabili — **HTTP polling** (compatibile con hosting condiviso) e **WebSocket** (per ambienti con processo persistente, es. VPS). Il passaggio dall'uno all'altro non richiede modifiche alla logica.
-- **Stato di gioco autoritativo lato server** (lobby → domanda → raccolta → risultati → classifica → podio), con calcolo dei tempi di risposta lato server.
-- **Modello dati estensibile**: domande polimorfiche per tipo; utenti, gruppi e condivisioni gestiti con tabelle dedicate additive.
+- **Roles**: *Administrator* (manages users and groups) and *User* (creates and owns their own polls). Management/content separation: the administrator manages accounts but does not access others' content by default.
+- **User groups**, with member management.
+- **Poll ownership** per user and **sharing** with individual users or whole groups.
+- **Permission levels**, increasing: *View only* → *Can play/host* → *Can edit* → *Co-owner*. When multiple permissions apply (direct and via group), the highest always wins.
+- **Revocable join link** (play mode only).
 
-## Stato del progetto
+## Interface
 
-🎨 **Fase di design completata** — flussi, modello dati e mockup di tutte le schermate (gioco, editor, amministrazione, condivisione, statistiche).
+A **liquid glass** design on a light theme: translucent panels, a pastel palette, and a responsive layout optimized for the two views (host and player).
 
-🛠️ **Implementazione** — in avvio.
+## Architecture
 
-## Licenza
+- **Swappable real-time layer**: the game logic depends on a single transport interface with two interchangeable implementations — **HTTP polling** (works on shared hosting) and **WebSocket** (for environments with a persistent process, e.g. a VPS). Switching between them requires no changes to the game logic.
+- **Server-authoritative game state** (lobby → question → collection → results → leaderboard → podium), with response times computed on the server.
+- **Extensible data model**: polymorphic questions by type; users, groups, shares and translations handled with dedicated, additive tables.
 
-Distribuito secondo i termini riportati nel file [LICENSE](LICENSE).
+## Project status
+
+🎨 **Design phase complete** — flows, data model, and mockups for every screen (game, editor, administration, sharing, analytics).
+
+🛠️ **Implementation** — getting started.
+
+## License
+
+Distributed under the terms of the [LICENSE](LICENSE) file.
