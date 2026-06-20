@@ -170,6 +170,48 @@ export const questions = {
   remove: (qid: string) => request<{ ok: true }>(`/api/questions/${qid}`, { method: "DELETE" }),
 };
 
+// ---- Sessions (live games) ----
+export interface SessionInfo {
+  id: string;
+  pin: string;
+  title: string;
+  state: string;
+  currentIndex: number;
+  total: number;
+}
+
+export interface SessionPlayer {
+  id: string;
+  nickname: string;
+  score: number;
+}
+
+export interface SessionDetail {
+  session: SessionInfo;
+  players: SessionPlayer[];
+  count: number;
+}
+
+export interface SessionByPin {
+  sessionId: string;
+  title: string;
+  state: string;
+  joinable: boolean;
+}
+
+export const sessions = {
+  // Host only (auth required). 400 {error:"quiz has no questions"} for empty quizzes.
+  create: (quizId: string, language?: string) =>
+    request<{ id: string; pin: string }>("/api/sessions", {
+      method: "POST",
+      body: language ? { quizId, language } : { quizId },
+    }),
+  // PUBLIC — players resolve a PIN to a session (no auth).
+  byPin: (pin: string) => request<SessionByPin>(`/api/sessions/by-pin/${encodeURIComponent(pin)}`),
+  // Host only — full snapshot.
+  get: (id: string) => request<SessionDetail>(`/api/sessions/${id}`),
+};
+
 // ---- Admin users ----
 export const admin = {
   listUsers: () => request<{ users: AdminUser[] }>("/api/admin/users"),

@@ -1,9 +1,11 @@
 // Landing / login card. Shown when GET /api/auth/me returns 401.
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { ApiError, auth } from "../api";
 import { useAuth } from "../auth";
 import {
   BrandMark,
+  btnGhost,
   btnPrimary,
   ErrorBox,
   glass,
@@ -142,6 +144,27 @@ export function Login() {
             {submitting ? "Accesso in corso…" : "Accedi"}
           </button>
         </form>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            margin: "22px 0 16px",
+            color: tokens.hint,
+            fontSize: 12,
+          }}
+        >
+          <span style={{ flex: 1, height: 1, background: "rgba(124,108,224,0.18)" }} />
+          partecipanti
+          <span style={{ flex: 1, height: 1, background: "rgba(124,108,224,0.18)" }} />
+        </div>
+        <Link
+          to="/join"
+          style={{ ...btnGhost, width: "100%", padding: "13px", boxSizing: "border-box", fontSize: 14 }}
+        >
+          Partecipa con un PIN
+        </Link>
 
         <p style={{ fontSize: 12, color: tokens.hint, marginTop: 22, textAlign: "center" }}>
           Accesso riservato. Contatta un amministratore per un account.

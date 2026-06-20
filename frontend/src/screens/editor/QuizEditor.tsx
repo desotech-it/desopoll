@@ -1,0 +1,234 @@
+// Quiz editor (/quiz/:id) — edit quiz meta + manage questions of all supported types.
+import React, { useCallback, useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import {
+  ApiError,
+  questions as questionsApi,
+  quizzes,
+  sessions,
+  type Question,
+  type QuestionType,
+  type Quiz,
+} from "../../api";
+import { defaultAnswerSpec } from "../../questionTypes";
+import {
+  btnGhost,
+  btnPrimary,
+  ErrorBox,
+  glass,
+  glassSoft,
+  Spinner,
+  tokens,
+} from "../../ui";
+import { QuizMetaEditor } from "./QuizMeta";
+import { TypePicker } from "./TypePicker";
+import { QuestionEditor } from "./QuestionEditor";
+
+export function QuizEditor() {
+  const { id = "" } = useParams();
+  const navigate = useNavigate();
+  const [quiz, setQuiz] = useState<Quiz | null>(null);
+  const [items, setItems] = useState<Question[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showTypePicker, setShowTypePicker] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [launching, setLaunching] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await quizzes.get(id);
+      setQuiz(data.quiz);
+      setItems([...data.questions].sort((a, b) => a.position - b.position));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Errore nel caricamento del quiz.");
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const patchQuiz = useCallback(
+    async (body: { title?: string; description?: string; is_public?: boolean }) => {
+      try {
+        const { quiz: updated } = await quizzes.update(id, body);
+        setQuiz(updated);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Salvataggio del quiz non riuscito.");
+      }
+    },
+    [id],
+  );
+
+  async function addQuestion(type: QuestionType) {
+    setAdding(true);
+    setError(null);
+    try {
+      const { question } = await questionsApi.create(id, {
+        type,
+        prompt: "",
+        time_limit_sec: 30,
+        points_mode: "standard",
+        speed_bonus: true,
+        answer_spec: defaultAnswerSpec(type),
+      });
+      setItems((prev) => [...prev, question].sort((a, b) => a.position - b.position));
+      setShowTypePicker(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Aggiunta della domanda non riuscita.");
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  async function launchGame() {
+    setLaunching(true);
+    setError(null);
+    try {
+      const { id: sessionId } = await sessions.create(id);
+      navigate(`/host/${sessionId}`);
+    } catch (e) {
+      // 400 {error:"quiz has no questions"} is surfaced here.
+      setError(e instanceof Error ? e.message : "Avvio della partita non riuscito.");
+    } finally {
+      setLaunching(false);
+    }
+  }
+
+  function onQuestionSaved(updated: Question) {
+    setItems((prev) => prev.map((q) => (q.id === updated.id ? updated : q)));
+  }
+
+  async function deleteQuestion(q: Question) {
+    if (!window.confirm("Eliminare questa domanda?")) return;
+    try {
+      await questionsApi.remove(q.id);
+      setItems((prev) => prev.filter((x) => x.id !== q.id));
+    } catch (e) {
+      window.alert(e instanceof ApiError ? e.message : "Eliminazione non riuscita.");
+    }
+  }
+
+  if (loading) {
+    return (
+      <div style={{ ...glass, padding: 8 }}>
+        <Spinner label="Caricamento dell'editor…" />
+      </div>
+    );
+  }
+
+  if (!quiz) {
+    return (
+      <div>
+        <ErrorBox message={error ?? "Quiz non trovato."} onRetry={load} />
+        <div style={{ marginTop: 16 }}>
+          <Link to="/" style={btnGhost}>
+            ← Torna alla dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div
+        style={{
+          marginBottom: 16,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          flexWrap: "wrap",
+        }}
+      >
+        <Link to="/" style={btnGhost}>
+          ← Tutti i quiz
+        </Link>
+        <button
+          style={{ ...btnPrimary, opacity: launching || items.length === 0 ? 0.6 : 1 }}
+          disabled={launching || items.length === 0}
+          onClick={launchGame}
+          title={items.length === 0 ? "Aggiungi almeno una domanda" : "Avvia una partita dal vivo"}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <polygon points="6 4 20 12 6 20 6 4" fill="currentColor" />
+          </svg>
+          {launching ? "Avvio…" : "Avvia partita"}
+        </button>
+      </div>
+
+      {error && (
+        <div style={{ marginBottom: 16 }}>
+          <ErrorBox message={error} />
+        </div>
+      )}
+
+      <QuizMetaEditor quiz={quiz} onPatch={patchQuiz} />
+
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          margin: "26px 0 14px",
+          gap: 12,
+          flexWrap: "wrap",
+        }}
+      >
+        <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>
+          Domande{" "}
+          <span style={{ fontSize: 13, fontWeight: 400, color: tokens.ink3, marginLeft: 4 }}>
+            {items.length}
+          </span>
+        </h2>
+        {!showTypePicker && (
+          <button style={btnPrimary} onClick={() => setShowTypePicker(true)}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Aggiungi domanda
+          </button>
+        )}
+      </div>
+
+      {showTypePicker && (
+        <TypePicker
+          adding={adding}
+          onPick={addQuestion}
+          onCancel={() => setShowTypePicker(false)}
+        />
+      )}
+
+      {items.length === 0 && !showTypePicker ? (
+        <div style={{ ...glassSoft, borderRadius: 22, padding: "40px 24px", textAlign: "center" }}>
+          <p style={{ color: tokens.muted, margin: "0 0 18px", fontSize: 14 }}>
+            Questo quiz non ha ancora domande.
+          </p>
+          <button style={btnPrimary} onClick={() => setShowTypePicker(true)}>
+            Aggiungi la prima domanda
+          </button>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {items.map((q, i) => (
+            <QuestionEditor
+              key={q.id}
+              index={i}
+              question={q}
+              onSaved={onQuestionSaved}
+              onDelete={() => deleteQuestion(q)}
+              onError={setError}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

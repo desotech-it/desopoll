@@ -1,7 +1,7 @@
 // Dashboard (/) — lists the user's quizzes as glass cards, with create + delete.
 import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ApiError, quizzes, type Quiz } from "../api";
+import { ApiError, quizzes, sessions, type Quiz } from "../api";
 import {
   btnDanger,
   btnGhost,
@@ -59,6 +59,16 @@ export function Dashboard() {
       setError(err instanceof Error ? err.message : "Creazione del quiz non riuscita.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function launchGame(q: Quiz) {
+    try {
+      const { id } = await sessions.create(q.id);
+      navigate(`/host/${id}`);
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : "Avvio della partita non riuscito.";
+      window.alert(msg);
     }
   }
 
@@ -154,7 +164,13 @@ export function Dashboard() {
           }}
         >
           {list.map((q) => (
-            <QuizCard key={q.id} quiz={q} onOpen={() => navigate(`/quiz/${q.id}`)} onDelete={() => deleteQuiz(q)} />
+            <QuizCard
+              key={q.id}
+              quiz={q}
+              onOpen={() => navigate(`/quiz/${q.id}`)}
+              onLaunch={() => launchGame(q)}
+              onDelete={() => deleteQuiz(q)}
+            />
           ))}
         </div>
       )}
@@ -162,7 +178,17 @@ export function Dashboard() {
   );
 }
 
-function QuizCard({ quiz, onOpen, onDelete }: { quiz: Quiz; onOpen: () => void; onDelete: () => void }) {
+function QuizCard({
+  quiz,
+  onOpen,
+  onLaunch,
+  onDelete,
+}: {
+  quiz: Quiz;
+  onOpen: () => void;
+  onLaunch: () => void;
+  onDelete: () => void;
+}) {
   return (
     <div
       style={{
@@ -220,7 +246,13 @@ function QuizCard({ quiz, onOpen, onDelete }: { quiz: Quiz; onOpen: () => void; 
           borderTop: "1px solid rgba(124,108,224,0.12)",
         }}
       >
-        <button style={btnPrimary} onClick={onOpen}>
+        <button style={btnPrimary} onClick={onLaunch} title="Avvia una partita dal vivo">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="6 4 20 12 6 20 6 4" fill="currentColor" stroke="none" />
+          </svg>
+          Avvia partita
+        </button>
+        <button style={btnGhost} onClick={onOpen}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
             <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />

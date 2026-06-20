@@ -5,10 +5,12 @@ import websocket from "@fastify/websocket";
 import type { Env } from "./env.js";
 import { db } from "./db.js";
 import { redis } from "./redis.js";
-import { type RealtimeTransport, sessionChannel } from "./realtime.js";
+import { type RealtimeTransport } from "./realtime.js";
 import { registerAuthRoutes } from "./auth/routes.js";
 import { registerQuizRoutes } from "./routes/quizzes.js";
 import { registerAdminRoutes } from "./routes/admin.js";
+import { registerSessionRoutes } from "./routes/sessions.js";
+import { registerGameWebsocket } from "./game/ws.js";
 
 export async function buildServer(env: Env, realtime: RealtimeTransport): Promise<FastifyInstance> {
   const app = Fastify({ logger: { level: env.NODE_ENV === "development" ? "info" : "warn" } });
@@ -23,6 +25,7 @@ export async function buildServer(env: Env, realtime: RealtimeTransport): Promis
   await registerAuthRoutes(app, env);
   await registerQuizRoutes(app);
   await registerAdminRoutes(app);
+  await registerSessionRoutes(app);
 
   // Liveness: process is up.
   app.get("/healthz", async () => ({ status: "ok" }));
@@ -46,35 +49,8 @@ export async function buildServer(env: Env, realtime: RealtimeTransport): Promis
     defaultLanguage: env.DEFAULT_LANGUAGE,
   }));
 
-  // WebSocket entrypoint. A client joins a live session channel; events published by any
-  // backend pod (via Redis pub/sub) are fanned out to every connected socket.
-  app.get("/ws", { websocket: true }, async (socket, req) => {
-    const { session } = (req.query ?? {}) as { session?: string };
-    if (!session) {
-      socket.send(JSON.stringify({ type: "error", message: "missing session" }));
-      socket.close();
-      return;
-    }
-    const channel = sessionChannel(session);
-    const unsubscribe = await realtime.subscribe(channel, (event) => {
-      socket.send(JSON.stringify(event));
-    });
-
-    socket.on("message", (raw: Buffer) => {
-      let msg: { type?: string };
-      try {
-        msg = JSON.parse(raw.toString());
-      } catch {
-        return;
-      }
-      if (msg.type === "ping") socket.send(JSON.stringify({ type: "pong" }));
-      // Game actions (join/answer/next/...) will be handled here in later iterations.
-    });
-
-    socket.on("close", () => {
-      void unsubscribe();
-    });
-  });
+  // Live-game WebSocket: join / answer / host actions, fanned out via Redis pub/sub.
+  registerGameWebsocket(app, realtime);
 
   return app;
 }

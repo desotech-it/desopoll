@@ -10,7 +10,35 @@ env:
   PROJECT: desopoll
 
 jobs:
+  # Gate: unit tests + type-check both packages. Images/chart only build if this passes.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Enforce 500-line file cap (no monoliths)
+        run: |
+          big=$(find backend/src frontend/src -type f \( -name '*.ts' -o -name '*.tsx' \) \
+            | xargs wc -l | awk '$2!="total" && $1>500 {print}')
+          if [ -n "$big" ]; then echo "Source files over 500 lines:"; echo "$big"; exit 1; fi
+          echo "OK — every source file is within the 500-line cap."
+      - name: Backend — install, typecheck, test
+        working-directory: backend
+        run: |
+          npm ci
+          npm run build
+          npm test
+      - name: Frontend — install, typecheck/build, test
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+          npm test --if-present
+
   images:
+    needs: test
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -41,6 +69,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
   chart:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

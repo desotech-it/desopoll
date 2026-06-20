@@ -13,13 +13,22 @@ import { Login } from "./screens/Login";
 import { Dashboard } from "./screens/Dashboard";
 import { QuizEditor } from "./screens/QuizEditor";
 import { AdminUsers } from "./screens/AdminUsers";
+import { HostConsole } from "./screens/host/HostConsole";
+import { Join } from "./screens/Join";
+import { PlayGame } from "./screens/play/PlayGame";
 import { BrandMark, btnGhost, glass, pageStyle, Spinner, tokens } from "./ui";
 
 export function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Root />
+        <Routes>
+          {/* PUBLIC player routes — rendered OUTSIDE the auth gate. */}
+          <Route path="/join" element={<Join />} />
+          <Route path="/play/:sessionId" element={<PlayGame />} />
+          {/* Everything else goes through the auth gate / app shell. */}
+          <Route path="/*" element={<Root />} />
+        </Routes>
       </BrowserRouter>
     </AuthProvider>
   );
@@ -53,23 +62,32 @@ function Shell() {
   const isAdmin = user?.role === "admin";
 
   return (
-    <div style={pageStyle}>
-      <div style={{ maxWidth: 1040, margin: "0 auto", padding: 24 }}>
-        <TopBar isAdmin={isAdmin} onLogout={logout} userEmail={user!.email} role={user!.role} />
-        <div style={{ marginTop: 26 }}>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/quiz/:id" element={<QuizEditor />} />
-            <Route
-              path="/admin/users"
-              element={isAdmin ? <AdminUsers /> : <Navigate to="/" replace />}
-            />
-            <Route path="/admin" element={<Navigate to="/admin/users" replace />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </div>
-      </div>
-    </div>
+    <Routes>
+      {/* Host console is auth-gated but full-bleed (its own GameStage). */}
+      <Route path="/host/:sessionId" element={<HostConsole />} />
+      <Route
+        path="/*"
+        element={
+          <div style={pageStyle}>
+            <div style={{ maxWidth: 1040, margin: "0 auto", padding: 24 }}>
+              <TopBar isAdmin={isAdmin} onLogout={logout} userEmail={user!.email} role={user!.role} />
+              <div style={{ marginTop: 26 }}>
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/quiz/:id" element={<QuizEditor />} />
+                  <Route
+                    path="/admin/users"
+                    element={isAdmin ? <AdminUsers /> : <Navigate to="/" replace />}
+                  />
+                  <Route path="/admin" element={<Navigate to="/admin/users" replace />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </div>
+            </div>
+          </div>
+        }
+      />
+    </Routes>
   );
 }
 
