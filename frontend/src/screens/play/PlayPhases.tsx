@@ -3,7 +3,7 @@
 // "have I answered this round" flag.
 import React, { useEffect, useState } from "react";
 import { btnPrimary, glass, glassSoft, ShapeBadge, SHAPES, tokens } from "../../ui";
-import { Countdown, Leaderboard, Podium, QuestionHeader } from "../../game/components";
+import { Countdown, Leaderboard, Podium, QuestionHeader, QuestionImage } from "../../game/components";
 import { useCountdown } from "../../game/useCountdown";
 import { myLeaderboardRow, personalResult } from "../../game/reducer";
 import type { AnswerPayload, GameSnapshot } from "../../game/types";
@@ -212,8 +212,14 @@ export function PlayResults({ snapshot }: { snapshot: GameSnapshot }) {
   const row = myLeaderboardRow(snapshot, snapshot.myPlayerId);
   const correct = mine?.correct === true;
   const points = mine?.points ?? 0;
+  const image = snapshot.question?.image;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {image && (
+        <div style={{ ...glass, padding: "14px 16px", textAlign: "center" }}>
+          <QuestionImage src={image} maxHeight={160} />
+        </div>
+      )}
       <div
         style={{
           ...glass,

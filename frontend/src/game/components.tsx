@@ -78,14 +78,27 @@ export function QuestionHeader({
       <h1 style={{ fontSize: 24, fontWeight: 700, margin: "10px 0 0", lineHeight: 1.25 }}>
         {question.prompt || "—"}
       </h1>
-      {question.image && (
-        <img
-          src={question.image}
-          alt=""
-          style={{ marginTop: 14, maxHeight: 220, maxWidth: "100%", borderRadius: 14, objectFit: "contain" }}
-        />
-      )}
+      <QuestionImage src={question.image} />
     </div>
+  );
+}
+
+// Question image (when present). Shared by the active-question header and the
+// results screens (host + player). Renders nothing when there is no image.
+export function QuestionImage({
+  src,
+  maxHeight = 220,
+}: {
+  src?: string | null;
+  maxHeight?: number;
+}) {
+  if (!src) return null;
+  return (
+    <img
+      src={src}
+      alt=""
+      style={{ marginTop: 14, maxHeight, maxWidth: "100%", borderRadius: 14, objectFit: "contain" }}
+    />
   );
 }
 

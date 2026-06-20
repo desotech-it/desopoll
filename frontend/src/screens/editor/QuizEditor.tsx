@@ -34,6 +34,7 @@ export function QuizEditor() {
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [adding, setAdding] = useState(false);
   const [launching, setLaunching] = useState(false);
+  const [reordering, setReordering] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -60,6 +61,7 @@ export function QuizEditor() {
         setQuiz(updated);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Salvataggio del quiz non riuscito.");
+        throw e; // let callers (e.g. the public toggle) reflect the failed save
       }
     },
     [id],
@@ -102,6 +104,32 @@ export function QuizEditor() {
 
   function onQuestionSaved(updated: Question) {
     setItems((prev) => prev.map((q) => (q.id === updated.id ? updated : q)));
+  }
+
+  // Move the question at `from` by one slot in `dir` and persist the new order.
+  async function moveQuestion(from: number, dir: -1 | 1) {
+    const to = from + dir;
+    if (to < 0 || to >= items.length || reordering) return;
+    const prev = items;
+    const next = [...items];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    // Optimistic reorder; reconcile with server response (renumbered positions).
+    setItems(next);
+    setReordering(true);
+    setError(null);
+    try {
+      const { questions: ordered } = await quizzes.reorderQuestions(
+        id,
+        next.map((q) => q.id),
+      );
+      setItems([...ordered].sort((a, b) => a.position - b.position));
+    } catch (e) {
+      setItems(prev); // revert on failure
+      setError(e instanceof Error ? e.message : "Riordino delle domande non riuscito.");
+    } finally {
+      setReordering(false);
+    }
   }
 
   async function deleteQuestion(q: Question) {
@@ -225,6 +253,11 @@ export function QuizEditor() {
               onSaved={onQuestionSaved}
               onDelete={() => deleteQuestion(q)}
               onError={setError}
+              onMoveUp={() => moveQuestion(i, -1)}
+              onMoveDown={() => moveQuestion(i, 1)}
+              canMoveUp={i > 0}
+              canMoveDown={i < items.length - 1}
+              reordering={reordering}
             />
           ))}
         </div>

@@ -84,6 +84,18 @@ export function Dashboard() {
     }
   }
 
+  async function duplicateQuiz(q: Quiz) {
+    setError(null);
+    try {
+      const { quiz } = await quizzes.duplicate(q.id);
+      // Refresh the list so the copy appears (and counts/timestamps are exact).
+      await load();
+      navigate(`/quiz/${quiz.id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Duplicazione del quiz non riuscita.");
+    }
+  }
+
   return (
     <div>
       <div
@@ -170,6 +182,7 @@ export function Dashboard() {
               onOpen={() => navigate(`/quiz/${q.id}`)}
               onLaunch={() => launchGame(q)}
               onDelete={() => deleteQuiz(q)}
+              onDuplicate={() => duplicateQuiz(q)}
             />
           ))}
         </div>
@@ -183,12 +196,15 @@ function QuizCard({
   onOpen,
   onLaunch,
   onDelete,
+  onDuplicate,
 }: {
   quiz: Quiz;
   onOpen: () => void;
   onLaunch: () => void;
   onDelete: () => void;
+  onDuplicate: () => void;
 }) {
+  const empty = (quiz.question_count ?? 0) === 0;
   return (
     <div
       style={{
@@ -201,18 +217,25 @@ function QuizCard({
     >
       <div style={{ padding: "16px 18px 0", flex: 1 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-          <h3
-            style={{
-              fontSize: 16,
-              fontWeight: 700,
-              margin: "0 0 6px",
-              lineHeight: 1.3,
-              color: tokens.ink,
-              cursor: "pointer",
-            }}
-            onClick={onOpen}
-          >
-            {quiz.title}
+          <h3 style={{ margin: "0 0 6px" }}>
+            <button
+              type="button"
+              onClick={onOpen}
+              style={{
+                font: "inherit",
+                fontSize: 16,
+                fontWeight: 700,
+                lineHeight: 1.3,
+                color: tokens.ink,
+                cursor: "pointer",
+                background: "none",
+                border: "none",
+                padding: 0,
+                textAlign: "left",
+              }}
+            >
+              {quiz.title}
+            </button>
           </h3>
           {quiz.is_public ? <Chip tone="green">Pubblico</Chip> : <Chip tone="violet">Privato</Chip>}
         </div>
@@ -246,7 +269,12 @@ function QuizCard({
           borderTop: "1px solid rgba(124,108,224,0.12)",
         }}
       >
-        <button style={btnPrimary} onClick={onLaunch} title="Avvia una partita dal vivo">
+        <button
+          style={{ ...btnPrimary, opacity: empty ? 0.5 : 1, cursor: empty ? "default" : "pointer" }}
+          onClick={onLaunch}
+          disabled={empty}
+          title={empty ? "Aggiungi almeno una domanda per avviare" : "Avvia una partita dal vivo"}
+        >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polygon points="6 4 20 12 6 20 6 4" fill="currentColor" stroke="none" />
           </svg>
@@ -258,6 +286,13 @@ function QuizCard({
             <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
           </svg>
           Modifica
+        </button>
+        <button style={btnGhost} onClick={onDuplicate} title="Duplica questo quiz">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="9" y="9" width="11" height="11" rx="2" />
+            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+          </svg>
+          Duplica
         </button>
         <button style={{ ...btnDanger, marginLeft: "auto" }} onClick={onDelete} title="Elimina quiz">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">

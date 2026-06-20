@@ -13,7 +13,12 @@ import { registerSessionRoutes } from "./routes/sessions.js";
 import { registerGameWebsocket } from "./game/ws.js";
 
 export async function buildServer(env: Env, realtime: RealtimeTransport): Promise<FastifyInstance> {
-  const app = Fastify({ logger: { level: env.NODE_ENV === "development" ? "info" : "warn" } });
+  const app = Fastify({
+    logger: { level: env.NODE_ENV === "development" ? "info" : "warn" },
+    // Raised from the 1 MiB default so questions can carry inline data-URL images.
+    // The per-question image is additionally size-validated in the quiz routes.
+    bodyLimit: 8 * 1024 * 1024,
+  });
 
   await app.register(cors, {
     origin: env.CORS_ORIGINS === "*" ? true : env.CORS_ORIGINS.split(",").map((s) => s.trim()),

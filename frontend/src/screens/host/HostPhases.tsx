@@ -18,6 +18,7 @@ import {
   Leaderboard,
   Podium,
   QuestionHeader,
+  QuestionImage,
 } from "../../game/components";
 import type { GameSnapshot } from "../../game/types";
 import { useCountdown } from "../../game/useCountdown";
@@ -108,10 +109,11 @@ export function HostActive({ snapshot, send }: PhaseProps) {
           I partecipanti stanno scrivendo la risposta…
         </div>
       ) : q.type === "true_false" ? (
+        // Shape indices MUST match the player side (PlayPhases TrueFalseButtons):
+        // Vero -> 3 (green square), Falso -> 0 (coral triangle).
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          {["Vero", "Falso"].map((label, i) => (
-            <OptionRow key={label} index={i} text={label} />
-          ))}
+          <OptionRow index={3} text="Vero" />
+          <OptionRow index={0} text="Falso" />
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -156,6 +158,11 @@ export function HostResults({ snapshot, send }: PhaseProps) {
         <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 14px" }}>
           {q?.prompt || "Risultati"}
         </h2>
+        {q?.image && (
+          <div style={{ marginBottom: 14 }}>
+            <QuestionImage src={q.image} maxHeight={180} />
+          </div>
+        )}
         <Distribution distribution={r.distribution} correctKeys={correctKeys} />
       </div>
 

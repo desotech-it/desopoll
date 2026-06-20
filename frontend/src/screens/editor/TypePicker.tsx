@@ -2,7 +2,8 @@
 import React from "react";
 import { type QuestionType } from "../../api";
 import { QUESTION_TYPES } from "../../questionTypes";
-import { btnGhost, glass, glassSoft, ShapeBadge, tokens } from "../../ui";
+import { btnGhost, glass, glassSoft, tokens } from "../../ui";
+import { TypeIcon } from "../../typeIcons";
 
 // ---- Question type picker ----
 export function TypePicker({
@@ -31,7 +32,7 @@ export function TypePicker({
           pointerEvents: adding ? "none" : "auto",
         }}
       >
-        {QUESTION_TYPES.map((t, i) => (
+        {QUESTION_TYPES.map((t) => (
           <button
             key={t.type}
             onClick={() => onPick(t.type)}
@@ -46,7 +47,7 @@ export function TypePicker({
               font: "inherit",
             }}
           >
-            <ShapeBadge index={i} size={40} />
+            <TypeIcon type={t.type} size={40} />
             <span style={{ fontSize: 14, fontWeight: 700, color: tokens.ink }}>{t.name}</span>
             <span style={{ fontSize: 12.5, color: tokens.ink2, lineHeight: 1.5 }}>{t.desc}</span>
           </button>

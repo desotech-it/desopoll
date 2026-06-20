@@ -1,4 +1,4 @@
-// Per-question editor: prompt, time limit, points mode + per-type answer editor.
+// Per-question editor: prompt, time limit, points mode, image + per-type answer.
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   questions as questionsApi,
@@ -7,8 +7,11 @@ import {
   type Question,
 } from "../../api";
 import { answerSummary, typeName } from "../../questionTypes";
-import { btnDanger, Chip, glass, inputStyle, labelStyle, tokens } from "../../ui";
+import { btnGhost, glass, inputStyle, labelStyle, tokens } from "../../ui";
+import { TypeChip } from "../../typeIcons";
 import { AnswerEditor } from "./AnswerEditors";
+import { ImagePicker } from "./ImagePicker";
+import { QuestionToolbar } from "./QuestionToolbar";
 
 // ---- Per-question editor ----
 export function QuestionEditor({
@@ -17,16 +20,27 @@ export function QuestionEditor({
   onSaved,
   onDelete,
   onError,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp,
+  canMoveDown,
+  reordering,
 }: {
   index: number;
   question: Question;
   onSaved: (q: Question) => void;
   onDelete: () => void;
   onError: (msg: string) => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+  reordering: boolean;
 }) {
   const [prompt, setPrompt] = useState(question.prompt);
   const [timeLimit, setTimeLimit] = useState(question.time_limit_sec);
   const [pointsMode, setPointsMode] = useState<PointsMode>(question.points_mode);
+  const [speedBonus, setSpeedBonus] = useState(question.speed_bonus);
   const [spec, setSpec] = useState<AnswerSpec>(question.answer_spec);
   const [savingState, setSavingState] = useState<"idle" | "saving" | "saved">("idle");
   const savedTimer = useRef<number | null>(null);
@@ -36,6 +50,7 @@ export function QuestionEditor({
     setPrompt(question.prompt);
     setTimeLimit(question.time_limit_sec);
     setPointsMode(question.points_mode);
+    setSpeedBonus(question.speed_bonus);
     setSpec(question.answer_spec);
   }, [question]);
 
@@ -50,7 +65,9 @@ export function QuestionEditor({
       prompt?: string;
       time_limit_sec?: number;
       points_mode?: PointsMode;
+      speed_bonus?: boolean;
       answer_spec?: AnswerSpec;
+      image?: string | null;
     }) => {
       setSavingState("saving");
       try {
@@ -94,7 +111,7 @@ export function QuestionEditor({
         >
           {index + 1}
         </span>
-        <Chip tone="violet">{typeName(question.type)}</Chip>
+        <TypeChip type={question.type} name={typeName(question.type)} />
         <span style={{ fontSize: 12, color: tokens.ink3 }}>{answerSummary(question.type, spec)}</span>
         <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
           {savingState === "saving" && (
@@ -103,12 +120,14 @@ export function QuestionEditor({
           {savingState === "saved" && (
             <span style={{ fontSize: 12, color: "#2f7d54" }}>✓ Salvato</span>
           )}
-          <button style={btnDanger} onClick={onDelete} title="Elimina domanda">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <polyline points="3 6 5 6 21 6" />
-              <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2" />
-            </svg>
-          </button>
+          <QuestionToolbar
+            canMoveUp={canMoveUp}
+            canMoveDown={canMoveDown}
+            reordering={reordering}
+            onMoveUp={onMoveUp}
+            onMoveDown={onMoveDown}
+            onDelete={onDelete}
+          />
         </span>
       </div>
 
@@ -122,6 +141,8 @@ export function QuestionEditor({
         style={{ ...inputStyle, resize: "vertical", lineHeight: 1.5, marginBottom: 16 }}
       />
 
+      <ImagePicker image={question.image} onChange={(image) => persist({ image })} />
+
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 18 }}>
         <div style={{ minWidth: 140 }}>
           <label style={labelStyle}>Tempo limite (sec)</label>
@@ -131,7 +152,12 @@ export function QuestionEditor({
             max={600}
             value={timeLimit}
             onChange={(e) => setTimeLimit(Number(e.target.value))}
-            onBlur={() => timeLimit !== question.time_limit_sec && persist({ time_limit_sec: timeLimit })}
+            onBlur={() => {
+              // Clamp to [5,600] and guard against NaN/empty input.
+              const clamped = Math.min(600, Math.max(5, Number.isFinite(timeLimit) ? timeLimit : 30));
+              if (clamped !== timeLimit) setTimeLimit(clamped);
+              if (clamped !== question.time_limit_sec) persist({ time_limit_sec: clamped });
+            }}
             style={inputStyle}
           />
         </div>
@@ -151,9 +177,49 @@ export function QuestionEditor({
             <option value="none">Nessun punteggio</option>
           </select>
         </div>
+        <div style={{ minWidth: 200, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+          <label style={labelStyle}>Bonus velocità</label>
+          <SpeedBonusToggle
+            checked={speedBonus}
+            disabled={pointsMode === "none"}
+            onChange={(v) => {
+              setSpeedBonus(v);
+              void persist({ speed_bonus: v });
+            }}
+          />
+        </div>
       </div>
 
       <AnswerEditor type={question.type} spec={spec} onChange={persistSpec} />
     </div>
+  );
+}
+
+function SpeedBonusToggle({
+  checked,
+  disabled,
+  onChange,
+}: {
+  checked: boolean;
+  disabled?: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      style={{
+        ...btnGhost,
+        justifyContent: "flex-start",
+        opacity: disabled ? 0.5 : 1,
+        cursor: disabled ? "default" : "pointer",
+        color: checked && !disabled ? "#2f7d54" : tokens.ink3,
+        background: checked && !disabled ? "rgba(152,226,182,0.18)" : "rgba(255,255,255,0.6)",
+      }}
+      title={disabled ? "Disponibile solo con punteggio attivo" : "Punti extra per le risposte rapide"}
+    >
+      {checked ? "Attivo" : "Disattivato"}
+    </button>
   );
 }

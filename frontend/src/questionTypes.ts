@@ -1,10 +1,18 @@
 // Metadata + answer_spec factory/normalizer helpers for the supported question types.
 import type { AnswerSpec, Option, QuestionType } from "./api";
 
+// A stable icon key per question type. Each type gets its OWN distinct glyph
+// (rendered by TypeIcon in typeIcons.tsx) and a consistent tone — deliberately
+// NOT reusing the four answer-option shapes (triangle/diamond/circle/square),
+// which players learn as "answer A/B/C/D" in the game.
+export type TypeIconKey = "single" | "multi" | "truefalse" | "poll" | "text";
+
 export interface TypeMeta {
   type: QuestionType;
   name: string;
   desc: string;
+  icon: TypeIconKey;
+  tone: "violet" | "teal" | "amber" | "rose" | "sky" | "green";
 }
 
 export const QUESTION_TYPES: TypeMeta[] = [
@@ -12,31 +20,51 @@ export const QUESTION_TYPES: TypeMeta[] = [
     type: "single_choice",
     name: "Scelta singola",
     desc: "I partecipanti scelgono una sola risposta corretta tra le opzioni. Ideale per domande fattuali.",
+    icon: "single",
+    tone: "violet",
   },
   {
     type: "multiple_choice",
     name: "Scelta multipla",
     desc: "I partecipanti possono selezionare più risposte corrette contemporaneamente.",
+    icon: "multi",
+    tone: "sky",
   },
   {
     type: "true_false",
     name: "Vero / Falso",
     desc: "I partecipanti decidono se un'affermazione è vera o falsa. Rapida da configurare.",
+    icon: "truefalse",
+    tone: "green",
   },
   {
     type: "poll",
     name: "Sondaggio (Poll)",
     desc: "I partecipanti votano un'opzione senza risposta corretta. Risultati in tempo reale.",
+    icon: "poll",
+    tone: "amber",
   },
   {
     type: "open_text",
     name: "Risposta aperta",
     desc: "I partecipanti digitano liberamente una risposta testuale tra quelle accettate.",
+    icon: "text",
+    tone: "teal",
   },
 ];
 
 export function typeName(type: QuestionType): string {
   return QUESTION_TYPES.find((t) => t.type === type)?.name ?? type;
+}
+
+// Look up the metadata (icon key + tone + name) for a question type.
+export function typeMeta(type: QuestionType): TypeMeta | undefined {
+  return QUESTION_TYPES.find((t) => t.type === type);
+}
+
+// The icon key for a type (used by TypeIcon and unit-tested for distinctness).
+export function typeIconKey(type: QuestionType): TypeIconKey {
+  return typeMeta(type)?.icon ?? "single";
 }
 
 export function uuid(): string {
@@ -64,8 +92,9 @@ export function defaultAnswerSpec(type: QuestionType): AnswerSpec {
       return { options: [a, b, opt(), opt()], correct: [a.id] };
     }
     case "multiple_choice": {
-      const a = opt();
-      return { options: [a, opt(), opt(), opt()], correct: [a.id] };
+      // No option is pre-marked correct: the author must explicitly pick at
+      // least one (validation enforces this before launch).
+      return { options: [opt(), opt(), opt(), opt()], correct: [] };
     }
     case "true_false":
       return { correct: true };

@@ -156,10 +156,14 @@ function OptionsEditor({
           );
         })}
       </div>
-      {options.length < 6 && (
+      {options.length < 6 ? (
         <button style={{ ...btnGhost, marginTop: 12 }} onClick={addOption}>
           + Aggiungi opzione
         </button>
+      ) : (
+        <p style={{ fontSize: 12, color: tokens.hint, marginTop: 10 }}>
+          Massimo 6 opzioni raggiunto.
+        </p>
       )}
       {!isPoll && correct.length === 0 && (
         <p style={{ fontSize: 12, color: "#a03050", marginTop: 8 }}>

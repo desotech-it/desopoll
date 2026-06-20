@@ -140,6 +140,16 @@ export const quizzes = {
     body: { title?: string; description?: string; is_public?: boolean; base_language?: string },
   ) => request<{ quiz: Quiz }>(`/api/quizzes/${id}`, { method: "PATCH", body }),
   remove: (id: string) => request<{ ok: true }>(`/api/quizzes/${id}`, { method: "DELETE" }),
+  // Reorder questions: pass the full ordered list of question ids. Returns the
+  // reordered question rows (positions renumbered 1..n).
+  reorderQuestions: (id: string, order: string[]) =>
+    request<{ questions: Question[] }>(`/api/quizzes/${id}/questions/order`, {
+      method: "PATCH",
+      body: { order },
+    }),
+  // Deep-copy a quiz (with all its questions). Returns the new quiz row.
+  duplicate: (id: string) =>
+    request<{ quiz: Quiz }>(`/api/quizzes/${id}/duplicate`, { method: "POST" }),
 };
 
 // ---- Questions ----
