@@ -130,6 +130,19 @@ create_registry_secret() {
     --dry-run=client -o yaml | kc apply -f -
 }
 
+# Secret with the OIDC client credentials (Authentik provider for desopoll). Creds come from
+# the environment and are NEVER hardcoded. Required when oidc.enabled=true in values. The
+# client_secret is sensitive — keep it in a secret store (e.g. 1Password) and inject via env.
+create_oidc_secret() {
+  log "Secret desopoll-oidc (OIDC client)"
+  : "${OIDC_CLIENT_ID:?Set OIDC_CLIENT_ID (Authentik provider Client ID)}"
+  : "${OIDC_CLIENT_SECRET:?Set OIDC_CLIENT_SECRET (Authentik provider Client Secret)}"
+  kc -n "$NAMESPACE" create secret generic desopoll-oidc \
+    --from-literal=client_id="$OIDC_CLIENT_ID" \
+    --from-literal=client_secret="$OIDC_CLIENT_SECRET" \
+    --dry-run=client -o yaml | kc apply -f -
+}
+
 # Deploy / upgrade the APP via Helm chart. Extra args are passed to helm.
 # NOTE: we pass --reset-values so the chart's values.yaml is the source of truth. Without it,
 # `helm upgrade` with no value flags REUSES the previous release's values (Helm 3 behaviour),
@@ -153,13 +166,15 @@ desopoll deploy — usage: ./deploy/deploy.sh <command>
   prereqs        [SHARED] one-time: gateway listeners + CoreDNS hosts entry (needs platform-owner OK)
   db-secret      create/update Secret desopoll-db from \$DESOPOLL_DATABASE_URL
   registry-secret create/update the $REGISTRY_SECRET imagePullSecret from \$REGISTRY_USERNAME/\$REGISTRY_PASSWORD
+  oidc-secret    create/update Secret desopoll-oidc from \$OIDC_CLIENT_ID/\$OIDC_CLIENT_SECRET
   app            helm upgrade --install the chart (extra args forwarded to helm)
   verify         show resources + external HTTPS check
-  all            prereqs -> db-secret (if set) -> registry-secret (if set) -> app -> verify
+  all            prereqs -> db-secret/registry-secret/oidc-secret (each if set) -> app -> verify
 
 Env overrides: KUBECONFIG_FILE NAMESPACE RELEASE HOST_FQDN GATEWAY_INTERNAL_IP SHARED_GATEWAY_NS
                SHARED_GATEWAY COREDNS_CM DESOPOLL_DATABASE_URL
                REGISTRY_SERVER REGISTRY_SECRET REGISTRY_USERNAME REGISTRY_PASSWORD
+               OIDC_CLIENT_ID OIDC_CLIENT_SECRET
 EOF
 }
 
@@ -167,12 +182,14 @@ case "${1:-}" in
   prereqs)         prereqs ;;
   db-secret)       create_db_secret ;;
   registry-secret) create_registry_secret ;;
+  oidc-secret)     create_oidc_secret ;;
   app)             shift; deploy_app "$@" ;;
   verify)          verify ;;
   all)
     prereqs
     [ -n "${DESOPOLL_DATABASE_URL:-}" ] && create_db_secret || warn "skipping db-secret (DESOPOLL_DATABASE_URL not set)"
     [ -n "${REGISTRY_PASSWORD:-}" ] && create_registry_secret || warn "skipping registry-secret (REGISTRY_PASSWORD not set)"
+    [ -n "${OIDC_CLIENT_SECRET:-}" ] && create_oidc_secret || warn "skipping oidc-secret (OIDC_CLIENT_SECRET not set)"
     deploy_app
     verify
     ;;

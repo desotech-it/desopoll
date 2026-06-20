@@ -60,11 +60,11 @@ session:
 #     --from-literal=client_id=... --from-literal=client_secret=...
 # Local email+password login stays available alongside SSO.
 oidc:
-  enabled: false
+  enabled: true
   issuer: https://auth.deso.tech/application/o/desopoll/
   scopes: openid email profile
   groupsClaim: groups
-  adminGroup: "" # Authentik group name whose members become desopoll admins
+  adminGroup: "desopoll-admins" # Authentik group name whose members become desopoll admins
   secretName: desopoll-oidc
 
 # Database. "managed" = a dedicated CloudNativePG cluster in THIS namespace (fully
