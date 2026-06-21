@@ -28,11 +28,21 @@ export type QuestionType =
   | "multiple_choice"
   | "true_false"
   | "poll"
-  | "open_text";
+  | "open_text"
+  | "numeric"
+  | "slider"
+  | "ordering"
+  | "word_cloud";
 
 export type PointsMode = "standard" | "double" | "none";
 
 export interface Option {
+  id: string;
+  text: string;
+}
+
+// An ordering item (distinct shape from Option to keep the contract explicit).
+export interface OrderingItem {
   id: string;
   text: string;
 }
@@ -42,7 +52,11 @@ export type AnswerSpec =
   | { options: Option[]; correct: string[] } // single_choice / multiple_choice
   | { options: Option[] } // poll
   | { correct: boolean } // true_false
-  | { accepted: string[]; caseSensitive?: boolean }; // open_text
+  | { accepted: string[]; caseSensitive?: boolean } // open_text
+  | { answer: number; tolerance?: number } // numeric
+  | { min: number; max: number; step?: number; answer: number; tolerance?: number } // slider
+  | { items: OrderingItem[]; correctOrder: string[] } // ordering
+  | Record<string, never>; // word_cloud (survey, no scoring)
 
 export interface Question {
   id: string;
@@ -209,6 +223,42 @@ export interface SessionByPin {
   joinable: boolean;
 }
 
+// ---- Post-game report (issue #3) ----
+export interface ReportDistributionEntry {
+  key: string;
+  label: string;
+  count: number;
+}
+
+export interface ReportQuestionStat {
+  questionId: string;
+  prompt: string;
+  type: QuestionType;
+  answeredCount: number;
+  correctCount: number;
+  correctPct: number; // 0..100, 0 (not NaN) when unanswered
+  distribution: ReportDistributionEntry[];
+}
+
+export interface ReportStanding {
+  nickname: string;
+  score: number;
+  rank: number;
+}
+
+export interface SessionReport {
+  session: {
+    id: string;
+    quizId: string;
+    state: string;
+    startedAt: string | null;
+    endedAt: string | null;
+    playerCount: number;
+  };
+  questions: ReportQuestionStat[];
+  standings: ReportStanding[];
+}
+
 export const sessions = {
   // Host only (auth required). 400 {error:"quiz has no questions"} for empty quizzes.
   create: (quizId: string, language?: string) =>
@@ -220,6 +270,8 @@ export const sessions = {
   byPin: (pin: string) => request<SessionByPin>(`/api/sessions/by-pin/${encodeURIComponent(pin)}`),
   // Host only — full snapshot.
   get: (id: string) => request<SessionDetail>(`/api/sessions/${id}`),
+  // Host only — durable post-game report (works after Redis teardown).
+  report: (id: string) => request<SessionReport>(`/api/sessions/${id}/report`),
 };
 
 // ---- Admin users ----

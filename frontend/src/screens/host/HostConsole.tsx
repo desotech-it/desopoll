@@ -58,7 +58,7 @@ export function HostConsole() {
     );
   }
 
-  const phaseProps = { snapshot, pin, send };
+  const phaseProps = { snapshot, pin, send, sessionId };
   const s = snapshot.state;
   const showAbort = s === "lobby" || s === "question_active" || s === "question_results" || s === "scoreboard";
 
@@ -111,7 +111,7 @@ export function HostConsole() {
       ) : s === "podium" ? (
         <HostPodium {...phaseProps} />
       ) : (
-        <HostEnded snapshot={snapshot} />
+        <HostEnded snapshot={snapshot} sessionId={sessionId} />
       )}
     </GameStage>
   );

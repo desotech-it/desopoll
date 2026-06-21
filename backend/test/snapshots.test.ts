@@ -78,4 +78,45 @@ describe("distribution", () => {
       { key: "false", label: "Falso", count: 1 },
     ]);
   });
+
+  function ans(payload: unknown): RuntimeAnswer {
+    return { playerId: "x", correct: false, partial: 0, points: 0, responseTimeMs: 0, payload };
+  }
+
+  it("buckets numeric answers by value, most frequent first", () => {
+    const question = q({ type: "numeric", options: [] });
+    const answers: Record<string, RuntimeAnswer> = {
+      p1: ans({ value: 10 }),
+      p2: ans({ value: 10 }),
+      p3: ans({ value: 20 }),
+    };
+    expect(distribution(question, answers)).toEqual([
+      { key: "10", label: "10", count: 2 },
+      { key: "20", label: "20", count: 1 },
+    ]);
+  });
+
+  it("buckets slider answers by value and skips non-numeric payloads", () => {
+    const question = q({ type: "slider", options: [] });
+    const answers: Record<string, RuntimeAnswer> = {
+      p1: ans({ value: 5 }),
+      p2: ans({ value: 5 }),
+      p3: ans({ text: "nope" }), // ignored: not numeric
+    };
+    expect(distribution(question, answers)).toEqual([{ key: "5", label: "5", count: 1 * 2 }]);
+  });
+
+  it("aggregates word_cloud word frequencies like open_text", () => {
+    const question = q({ type: "word_cloud", options: [] });
+    const answers: Record<string, RuntimeAnswer> = {
+      p1: ans({ text: "veloce" }),
+      p2: ans({ text: " veloce " }), // trimmed → same bucket
+      p3: ans({ text: "lento" }),
+      p4: ans({ text: "" }), // blank ignored
+    };
+    expect(distribution(question, answers)).toEqual([
+      { key: "veloce", label: "veloce", count: 2 },
+      { key: "lento", label: "lento", count: 1 },
+    ]);
+  });
 });

@@ -14,6 +14,7 @@ import { Dashboard } from "./screens/Dashboard";
 import { QuizEditor } from "./screens/QuizEditor";
 import { AdminUsers } from "./screens/AdminUsers";
 import { HostConsole } from "./screens/host/HostConsole";
+import { ReportScreen } from "./screens/report/ReportScreen";
 import { Join } from "./screens/Join";
 import { PlayGame } from "./screens/play/PlayGame";
 import { BrandMark, btnGhost, glass, pageStyle, Spinner, tokens } from "./ui";
@@ -75,6 +76,7 @@ function Shell() {
                 <Routes>
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/quiz/:id" element={<QuizEditor />} />
+                  <Route path="/report/:sessionId" element={<ReportScreen />} />
                   <Route
                     path="/admin/users"
                     element={isAdmin ? <AdminUsers /> : <Navigate to="/" replace />}

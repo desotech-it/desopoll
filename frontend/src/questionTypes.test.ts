@@ -1,9 +1,13 @@
 // Tests for answer_spec defaults + metadata lookups.
 import { describe, it, expect } from "vitest";
 import {
+  answerSummary,
   defaultAnswerSpec,
   hasOptions,
+  isNumeric,
   isOpenText,
+  isOrdering,
+  isSlider,
   isTrueFalse,
   typeMeta,
   typeName,
@@ -44,6 +48,65 @@ describe("defaultAnswerSpec", () => {
     const spec = defaultAnswerSpec("open_text");
     expect(isOpenText(spec)).toBe(true);
     if (isOpenText(spec)) expect(spec.accepted).toEqual([]);
+  });
+
+  it("numeric defaults to answer 0 with zero tolerance", () => {
+    const spec = defaultAnswerSpec("numeric");
+    expect(isNumeric(spec)).toBe(true);
+    if (isNumeric(spec)) {
+      expect(spec.answer).toBe(0);
+      expect(spec.tolerance).toBe(0);
+    }
+    // numeric must NOT be mistaken for a slider (no min/max).
+    expect(isSlider(spec)).toBe(false);
+  });
+
+  it("slider defaults to a 0..100 range with answer 50", () => {
+    const spec = defaultAnswerSpec("slider");
+    expect(isSlider(spec)).toBe(true);
+    if (isSlider(spec)) {
+      expect(spec.min).toBe(0);
+      expect(spec.max).toBe(100);
+      expect(spec.step).toBe(1);
+      expect(spec.answer).toBe(50);
+    }
+  });
+
+  it("ordering's correctOrder lists every item id once", () => {
+    const spec = defaultAnswerSpec("ordering");
+    expect(isOrdering(spec)).toBe(true);
+    if (isOrdering(spec)) {
+      expect(spec.items.length).toBe(3);
+      expect(spec.correctOrder).toEqual(spec.items.map((i) => i.id));
+      expect(new Set(spec.correctOrder).size).toBe(spec.items.length);
+    }
+  });
+
+  it("word_cloud is an empty survey spec", () => {
+    const spec = defaultAnswerSpec("word_cloud");
+    expect(Object.keys(spec)).toEqual([]);
+    expect(isNumeric(spec)).toBe(false);
+    expect(isSlider(spec)).toBe(false);
+    expect(isOrdering(spec)).toBe(false);
+  });
+});
+
+describe("answerSummary (new types)", () => {
+  it("summarizes numeric with tolerance", () => {
+    expect(answerSummary("numeric", { answer: 42, tolerance: 2 })).toBe("Risposta: 42 ± 2");
+    expect(answerSummary("numeric", { answer: 42, tolerance: 0 })).toBe("Risposta: 42");
+  });
+
+  it("summarizes slider range + answer", () => {
+    expect(answerSummary("slider", { min: 0, max: 10, step: 1, answer: 5, tolerance: 1 })).toBe(
+      "Scala 0–10 · risposta 5 ± 1",
+    );
+  });
+
+  it("summarizes ordering item count and word_cloud survey", () => {
+    const ord = defaultAnswerSpec("ordering");
+    expect(answerSummary("ordering", ord)).toBe("3 elementi da ordinare");
+    expect(answerSummary("word_cloud", {})).toBe("Sondaggio · nessun punteggio");
   });
 });
 

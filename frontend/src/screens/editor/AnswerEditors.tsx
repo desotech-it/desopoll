@@ -4,6 +4,12 @@ import { type AnswerSpec, type Option, type QuestionType } from "../../api";
 import { hasOptions, isOpenText, isTrueFalse, uuid } from "../../questionTypes";
 import { btnGhost, glassSoft, inputStyle, labelStyle, ShapeBadge, tokens } from "../../ui";
 import { Toggle } from "./QuizMeta";
+import {
+  NumericEditor,
+  OrderingEditor,
+  SliderEditor,
+  WordCloudEditor,
+} from "./AnswerEditorsNew";
 
 // ---- Answer-spec editors (one per type) ----
 export function AnswerEditor({
@@ -17,6 +23,10 @@ export function AnswerEditor({
 }) {
   if (type === "true_false") return <TrueFalseEditor spec={spec} onChange={onChange} />;
   if (type === "open_text") return <OpenTextEditor spec={spec} onChange={onChange} />;
+  if (type === "numeric") return <NumericEditor spec={spec} onChange={onChange} />;
+  if (type === "slider") return <SliderEditor spec={spec} onChange={onChange} />;
+  if (type === "ordering") return <OrderingEditor spec={spec} onChange={onChange} />;
+  if (type === "word_cloud") return <WordCloudEditor />;
   if (type === "poll") return <OptionsEditor type={type} spec={spec} onChange={onChange} />;
   // single_choice / multiple_choice
   return <OptionsEditor type={type} spec={spec} onChange={onChange} />;

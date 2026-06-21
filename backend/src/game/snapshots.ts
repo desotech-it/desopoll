@@ -49,7 +49,23 @@ export function podium(players: Record<string, RuntimePlayer>): LeaderboardRow[]
   return leaderboard(players).slice(0, 3);
 }
 
-// Count answers per choice/value for the results screen. open_text is summarized by text.
+// Tally a list of string keys into the top-N descending buckets (used for free-text /
+// word_cloud frequencies and numeric value buckets). Blank keys are skipped.
+function frequencyBuckets(keys: string[], topN = 8): DistributionBucket[] {
+  const counts = new Map<string, number>();
+  for (const k of keys) {
+    const t = k.trim();
+    if (!t) continue;
+    counts.set(t, (counts.get(t) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, topN)
+    .map(([label, count]) => ({ key: label, label, count }));
+}
+
+// Count answers per choice/value for the results screen. open_text and word_cloud are
+// summarized by text frequency; numeric/slider are bucketed by their numeric value.
 export function distribution(
   q: RuntimeQuestion,
   answers: Record<string, RuntimeAnswer>,
@@ -67,17 +83,17 @@ export function distribution(
       { key: "false", label: "Falso", count: buckets.false },
     ];
   }
-  if (q.type === "open_text") {
-    const counts = new Map<string, number>();
+  if (q.type === "open_text" || q.type === "word_cloud") {
+    return frequencyBuckets(values.map((a) => String((a.payload as { text?: unknown })?.text ?? "")));
+  }
+  if (q.type === "numeric" || q.type === "slider") {
+    // Bucket by the submitted numeric value (rendered as its string label).
+    const keys: string[] = [];
     for (const a of values) {
-      const t = String((a.payload as { text?: unknown })?.text ?? "").trim();
-      if (!t) continue;
-      counts.set(t, (counts.get(t) ?? 0) + 1);
+      const v = (a.payload as { value?: unknown })?.value;
+      if (typeof v === "number" && Number.isFinite(v)) keys.push(String(v));
     }
-    return [...counts.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8)
-      .map(([label, count]) => ({ key: label, label, count }));
+    return frequencyBuckets(keys);
   }
   // single_choice / multiple_choice / poll — count per option id.
   return q.options.map((o) => {

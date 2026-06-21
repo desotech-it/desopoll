@@ -1,7 +1,7 @@
 // Host console phase views: Lobby, Active question, Results, Podium.
 // Kept separate from HostConsole.tsx so each file stays small.
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   btnDanger,
   btnGhost,
@@ -27,6 +27,7 @@ interface PhaseProps {
   snapshot: GameSnapshot;
   pin: string;
   send: (action: "start" | "lock" | "next" | "end" | "abort") => void;
+  sessionId: string;
 }
 
 function joinHint(): string {
@@ -104,10 +105,29 @@ export function HostActive({ snapshot, send }: PhaseProps) {
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <QuestionHeader question={q} right={<Countdown seconds={remaining} />} />
 
-      {q.type === "open_text" ? (
-        <div style={{ ...glassSoft, padding: "18px 20px", color: tokens.muted, fontSize: 15 }}>
-          I partecipanti stanno scrivendo la risposta…
-        </div>
+      {q.type === "open_text" || q.type === "word_cloud" ? (
+        <HostWaitNote>
+          {q.type === "word_cloud"
+            ? "I partecipanti stanno scrivendo una parola…"
+            : "I partecipanti stanno scrivendo la risposta…"}
+        </HostWaitNote>
+      ) : q.type === "numeric" ? (
+        <HostWaitNote>I partecipanti stanno inserendo un numero…</HostWaitNote>
+      ) : q.type === "slider" ? (
+        <HostWaitNote>
+          I partecipanti stanno scegliendo un valore sul cursore
+          {Number.isFinite(q.min) && Number.isFinite(q.max) ? ` (${q.min}–${q.max})` : ""}…
+        </HostWaitNote>
+      ) : q.type === "ordering" ? (
+        q.options.length > 0 ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {q.options.map((o, i) => (
+              <OptionRow key={o.id} index={i} text={o.text} />
+            ))}
+          </div>
+        ) : (
+          <HostWaitNote>I partecipanti stanno ordinando gli elementi…</HostWaitNote>
+        )
       ) : q.type === "true_false" ? (
         // Shape indices MUST match the player side (PlayPhases TrueFalseButtons):
         // Vero -> 3 (green square), Falso -> 0 (coral triangle).
@@ -138,6 +158,15 @@ function OptionRow({ index, text }: { index: number; text: string }) {
     <div style={{ ...glass, display: "flex", alignItems: "center", gap: 12, padding: "14px 16px" }}>
       <ShapeBadge index={index} size={34} />
       <span style={{ fontWeight: 600, color: tokens.ink, fontSize: 15 }}>{text || "—"}</span>
+    </div>
+  );
+}
+
+// Note shown on the host active screen for free-input types (no fixed options).
+function HostWaitNote({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ ...glassSoft, padding: "18px 20px", color: tokens.muted, fontSize: 15 }}>
+      {children}
     </div>
   );
 }
@@ -180,7 +209,7 @@ export function HostResults({ snapshot, send }: PhaseProps) {
   );
 }
 
-export function HostPodium({ snapshot, send }: PhaseProps) {
+export function HostPodium({ snapshot, send, sessionId }: PhaseProps) {
   const navigate = useNavigate();
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -196,7 +225,10 @@ export function HostPodium({ snapshot, send }: PhaseProps) {
         <Leaderboard rows={snapshot.leaderboard} />
       </div>
 
-      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" }}>
+        <Link to={`/report/${sessionId}`} style={btnGhost} onClick={() => send("end")}>
+          Vedi i risultati completi
+        </Link>
         <button
           style={btnPrimary}
           onClick={() => {
@@ -211,7 +243,7 @@ export function HostPodium({ snapshot, send }: PhaseProps) {
   );
 }
 
-export function HostEnded({ snapshot }: { snapshot: GameSnapshot }) {
+export function HostEnded({ snapshot, sessionId }: { snapshot: GameSnapshot; sessionId: string }) {
   const navigate = useNavigate();
   const aborted = snapshot.state === "aborted";
   return (
@@ -225,9 +257,16 @@ export function HostEnded({ snapshot }: { snapshot: GameSnapshot }) {
       <div style={{ maxWidth: 420, margin: "0 auto 22px", textAlign: "left" }}>
         <Leaderboard rows={snapshot.leaderboard} />
       </div>
-      <button style={btnPrimary} onClick={() => navigate("/")}>
-        Torna alla dashboard
-      </button>
+      <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+        {!aborted && (
+          <Link to={`/report/${sessionId}`} style={btnGhost}>
+            Vedi i risultati completi
+          </Link>
+        )}
+        <button style={btnPrimary} onClick={() => navigate("/")}>
+          Torna alla dashboard
+        </button>
+      </div>
     </div>
   );
 }

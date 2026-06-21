@@ -12,6 +12,10 @@ const ALL_TYPES: QuestionType[] = [
   "true_false",
   "poll",
   "open_text",
+  "numeric",
+  "slider",
+  "ordering",
+  "word_cloud",
 ];
 
 describe("question type icons", () => {

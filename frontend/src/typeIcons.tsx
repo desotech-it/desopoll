@@ -65,6 +65,46 @@ export function TypeIconGlyph({ icon, size = 18 }: { icon: TypeIconKey; size?: n
           <path d="M5 4h2M5 20h2" />
         </svg>
       );
+    case "numeric":
+      // A "#" hash sign — stands for "a number".
+      return (
+        <svg {...common}>
+          <line x1="9" y1="4" x2="7" y2="20" />
+          <line x1="17" y1="4" x2="15" y2="20" />
+          <line x1="4" y1="9" x2="20" y2="9" />
+          <line x1="3" y1="15" x2="19" y2="15" />
+        </svg>
+      );
+    case "slider":
+      // A horizontal track with a draggable knob.
+      return (
+        <svg {...common}>
+          <line x1="3" y1="12" x2="21" y2="12" />
+          <circle cx="9" cy="12" r="3.2" fill="currentColor" stroke="none" />
+        </svg>
+      );
+    case "ordering":
+      // A numbered/ranked list with up-down reorder arrows.
+      return (
+        <svg {...common}>
+          <line x1="9" y1="6" x2="20" y2="6" />
+          <line x1="9" y1="12" x2="20" y2="12" />
+          <line x1="9" y1="18" x2="20" y2="18" />
+          <polyline points="4 8 4 4 4 8" />
+          <path d="M3 6 L4 4 L5 6" />
+          <path d="M3 16 L4 18 L5 16" />
+          <line x1="4" y1="10" x2="4" y2="18" />
+        </svg>
+      );
+    case "wordcloud":
+      // Three speech/word bubbles of differing sizes.
+      return (
+        <svg {...common}>
+          <ellipse cx="8" cy="9" rx="5" ry="3.5" />
+          <ellipse cx="16" cy="14" rx="4" ry="3" />
+          <ellipse cx="9" cy="17" rx="2.6" ry="2" />
+        </svg>
+      );
     default:
       return (
         <svg {...common}>

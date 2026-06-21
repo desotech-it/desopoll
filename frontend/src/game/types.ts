@@ -26,6 +26,8 @@ export interface LiveOption {
 }
 
 // A question as broadcast to clients (NO correct answers — anti-cheat).
+// `options` carries the choosable items for choice/poll/ordering. Slider bounds
+// (min/max/step) are optional extras the player control reads when present.
 export interface LiveQuestion {
   index: number;
   total: number;
@@ -34,6 +36,9 @@ export interface LiveQuestion {
   image?: string | null;
   timeLimitSec: number;
   options: LiveOption[];
+  min?: number;
+  max?: number;
+  step?: number;
 }
 
 export interface DistributionEntry {
@@ -98,7 +103,9 @@ export type AnswerPayload =
   | { optionId: string } // single_choice / poll
   | { optionIds: string[] } // multiple_choice
   | { value: boolean } // true_false
-  | { text: string }; // open_text
+  | { text: string } // open_text / word_cloud
+  | { value: number } // numeric / slider
+  | { order: string[] }; // ordering
 
 export type ClientMessage =
   | { type: "join"; nickname: string }

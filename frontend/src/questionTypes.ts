@@ -1,11 +1,20 @@
 // Metadata + answer_spec factory/normalizer helpers for the supported question types.
-import type { AnswerSpec, Option, QuestionType } from "./api";
+import type { AnswerSpec, OrderingItem, Option, QuestionType } from "./api";
 
 // A stable icon key per question type. Each type gets its OWN distinct glyph
 // (rendered by TypeIcon in typeIcons.tsx) and a consistent tone — deliberately
 // NOT reusing the four answer-option shapes (triangle/diamond/circle/square),
 // which players learn as "answer A/B/C/D" in the game.
-export type TypeIconKey = "single" | "multi" | "truefalse" | "poll" | "text";
+export type TypeIconKey =
+  | "single"
+  | "multi"
+  | "truefalse"
+  | "poll"
+  | "text"
+  | "numeric"
+  | "slider"
+  | "ordering"
+  | "wordcloud";
 
 export interface TypeMeta {
   type: QuestionType;
@@ -51,6 +60,34 @@ export const QUESTION_TYPES: TypeMeta[] = [
     icon: "text",
     tone: "teal",
   },
+  {
+    type: "numeric",
+    name: "Risposta numerica",
+    desc: "I partecipanti inseriscono un numero. Corretto entro una tolleranza configurabile.",
+    icon: "numeric",
+    tone: "rose",
+  },
+  {
+    type: "slider",
+    name: "Cursore (Slider)",
+    desc: "I partecipanti scelgono un valore su una scala min–max. Corretto entro una tolleranza.",
+    icon: "slider",
+    tone: "sky",
+  },
+  {
+    type: "ordering",
+    name: "Ordinamento",
+    desc: "I partecipanti riordinano gli elementi nella sequenza corretta. Punteggio parziale.",
+    icon: "ordering",
+    tone: "violet",
+  },
+  {
+    type: "word_cloud",
+    name: "Nuvola di parole",
+    desc: "I partecipanti scrivono una parola libera. Sondaggio: nessun punteggio, solo aggregazione.",
+    icon: "wordcloud",
+    tone: "amber",
+  },
 ];
 
 export function typeName(type: QuestionType): string {
@@ -83,6 +120,10 @@ function opt(text = ""): Option {
   return { id: uuid(), text };
 }
 
+function orderItem(text = ""): OrderingItem {
+  return { id: uuid(), text };
+}
+
 // Build a fresh, valid answer_spec for a newly created question of the given type.
 export function defaultAnswerSpec(type: QuestionType): AnswerSpec {
   switch (type) {
@@ -102,6 +143,16 @@ export function defaultAnswerSpec(type: QuestionType): AnswerSpec {
       return { options: [opt(), opt(), opt(), opt()] };
     case "open_text":
       return { accepted: [], caseSensitive: false };
+    case "numeric":
+      return { answer: 0, tolerance: 0 };
+    case "slider":
+      return { min: 0, max: 100, step: 1, answer: 50, tolerance: 0 };
+    case "ordering": {
+      const items = [orderItem(), orderItem(), orderItem()];
+      return { items, correctOrder: items.map((i) => i.id) };
+    }
+    case "word_cloud":
+      return {};
     default:
       return { options: [opt(), opt()], correct: [] };
   }
@@ -122,6 +173,29 @@ export function isTrueFalse(spec: AnswerSpec): spec is { correct: boolean } {
 export function isOpenText(spec: AnswerSpec): spec is { accepted: string[]; caseSensitive?: boolean } {
   return typeof spec === "object" && spec !== null && "accepted" in spec;
 }
+export function isNumeric(spec: AnswerSpec): spec is { answer: number; tolerance?: number } {
+  return (
+    typeof spec === "object" &&
+    spec !== null &&
+    "answer" in spec &&
+    !("min" in spec) &&
+    typeof (spec as { answer: unknown }).answer === "number"
+  );
+}
+export function isSlider(
+  spec: AnswerSpec,
+): spec is { min: number; max: number; step?: number; answer: number; tolerance?: number } {
+  return (
+    typeof spec === "object" &&
+    spec !== null &&
+    "min" in spec &&
+    "max" in spec &&
+    "answer" in spec
+  );
+}
+export function isOrdering(spec: AnswerSpec): spec is { items: OrderingItem[]; correctOrder: string[] } {
+  return typeof spec === "object" && spec !== null && "items" in spec;
+}
 
 // Short human description of the configured answer (for the question list).
 export function answerSummary(type: QuestionType, spec: AnswerSpec): string {
@@ -131,6 +205,21 @@ export function answerSummary(type: QuestionType, spec: AnswerSpec): string {
   if (type === "open_text" && isOpenText(spec)) {
     const n = spec.accepted.length;
     return n ? `${n} risposta/e accettata/e` : "Nessuna risposta accettata";
+  }
+  if (type === "numeric" && isNumeric(spec)) {
+    const tol = spec.tolerance ?? 0;
+    return tol ? `Risposta: ${spec.answer} ± ${tol}` : `Risposta: ${spec.answer}`;
+  }
+  if (type === "slider" && isSlider(spec)) {
+    const tol = spec.tolerance ?? 0;
+    const base = `Scala ${spec.min}–${spec.max} · risposta ${spec.answer}`;
+    return tol ? `${base} ± ${tol}` : base;
+  }
+  if (type === "ordering" && isOrdering(spec)) {
+    return `${spec.items.length} elementi da ordinare`;
+  }
+  if (type === "word_cloud") {
+    return "Sondaggio · nessun punteggio";
   }
   if (hasOptions(spec)) {
     const total = spec.options.length;

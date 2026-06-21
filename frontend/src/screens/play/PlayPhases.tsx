@@ -7,6 +7,12 @@ import { Countdown, Leaderboard, Podium, QuestionHeader, QuestionImage } from ".
 import { useCountdown } from "../../game/useCountdown";
 import { myLeaderboardRow, personalResult } from "../../game/reducer";
 import type { AnswerPayload, GameSnapshot } from "../../game/types";
+import {
+  NumericInput,
+  OrderingInput,
+  SliderInput,
+  WordCloudInput,
+} from "./PlayInputs";
 
 export function PlayLobby({ nickname }: { nickname: string }) {
   return (
@@ -61,6 +67,14 @@ export function PlayAnswer({ snapshot, answered, onAnswer }: AnswerProps) {
       <QuestionHeader question={q} right={<Countdown seconds={remaining} />} />
       {q.type === "open_text" ? (
         <OpenTextInput onSubmit={(text) => onAnswer({ text })} />
+      ) : q.type === "word_cloud" ? (
+        <WordCloudInput onSubmit={(text) => onAnswer({ text })} />
+      ) : q.type === "numeric" ? (
+        <NumericInput onSubmit={(value) => onAnswer({ value })} />
+      ) : q.type === "slider" ? (
+        <SliderInput question={q} onSubmit={(value) => onAnswer({ value })} />
+      ) : q.type === "ordering" ? (
+        <OrderingInput options={q.options} onSubmit={(order) => onAnswer({ order })} />
       ) : q.type === "true_false" ? (
         <TrueFalseButtons onPick={(value) => onAnswer({ value })} />
       ) : q.type === "multiple_choice" ? (
