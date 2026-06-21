@@ -8,11 +8,14 @@ import {
   type Question,
 } from "../../api";
 import { answerSummary, typeName } from "../../questionTypes";
-import { btnGhost, glass, inputStyle, labelStyle, tokens } from "../../ui";
+import { speedBonusApplies } from "../../scoring";
+import { glass, inputStyle, labelStyle, tokens } from "../../ui";
 import { TypeChip } from "../../typeIcons";
 import { AnswerEditor } from "./AnswerEditors";
 import { ImagePicker } from "./ImagePicker";
 import { QuestionToolbar } from "./QuestionToolbar";
+import { Toggle } from "./QuizMeta";
+import { ScoringHelp } from "./ScoringHelp";
 
 // ---- Per-question editor ----
 export function QuestionEditor({
@@ -183,7 +186,7 @@ export function QuestionEditor({
           <label style={labelStyle}>{t("question.speedBonusLabel")}</label>
           <SpeedBonusToggle
             checked={speedBonus}
-            disabled={pointsMode === "none"}
+            disabled={!speedBonusApplies(question.type, pointsMode)}
             onChange={(v) => {
               setSpeedBonus(v);
               void persist({ speed_bonus: v });
@@ -191,6 +194,8 @@ export function QuestionEditor({
           />
         </div>
       </div>
+
+      <ScoringHelp type={question.type} pointsMode={pointsMode} speedBonus={speedBonus} />
 
       <AnswerEditor type={question.type} spec={spec} onChange={persistSpec} />
     </div>
@@ -207,22 +212,23 @@ function SpeedBonusToggle({
   onChange: (v: boolean) => void;
 }) {
   const { t } = useTranslation("editor");
+  const stateLabel = checked ? t("question.speedBonusOn") : t("question.speedBonusOff");
   return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={() => onChange(!checked)}
-      style={{
-        ...btnGhost,
-        justifyContent: "flex-start",
-        opacity: disabled ? 0.5 : 1,
-        cursor: disabled ? "default" : "pointer",
-        color: checked && !disabled ? "#2f7d54" : tokens.ink3,
-        background: checked && !disabled ? "rgba(152,226,182,0.18)" : "rgba(255,255,255,0.6)",
-      }}
+    <div
+      aria-disabled={disabled}
       title={disabled ? t("question.speedBonusDisabledHint") : t("question.speedBonusHint")}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        minHeight: 40,
+        opacity: disabled ? 0.5 : 1,
+        cursor: disabled ? "not-allowed" : "default",
+      }}
     >
-      {checked ? t("question.speedBonusOn") : t("question.speedBonusOff")}
-    </button>
+      {/* Reuse the shared Toggle (also used by the public-quiz switch). When
+          disabled (no scoring) the change is a no-op so it can't be toggled. */}
+      <Toggle checked={checked} onChange={(v) => !disabled && onChange(v)} label={stateLabel} />
+    </div>
   );
 }
