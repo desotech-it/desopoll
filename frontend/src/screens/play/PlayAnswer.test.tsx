@@ -52,4 +52,16 @@ describe("PlayAnswer (single_choice)", () => {
     expect(screen.getByText(/Risposta inviata/i)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Roma/ })).not.toBeInTheDocument();
   });
+
+  it("lays out options in the responsive answer grid (single column on phones)", () => {
+    // The options live inside .poll-answer-grid, which is 1fr on phones and
+    // 1fr 1fr above the grid breakpoint (issue #7 responsive overhaul).
+    const { container } = render(
+      <PlayAnswer snapshot={activeSnapshot()} answered={false} onAnswer={() => {}} />,
+    );
+    const grid = container.querySelector(".poll-answer-grid");
+    expect(grid).not.toBeNull();
+    // All four option buttons are children of the grid.
+    expect(grid!.querySelectorAll("button")).toHaveLength(4);
+  });
 });

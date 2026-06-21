@@ -165,9 +165,9 @@ function ArrowBtn({
       disabled={disabled}
       aria-label={dir === "up" ? t("player.moveUp") : t("player.moveDown")}
       style={{
-        width: 38,
-        height: 38,
-        borderRadius: 11,
+        width: 44,
+        height: 44,
+        borderRadius: 12,
         flex: "0 0 auto",
         cursor: disabled ? "default" : "pointer",
         border: "1px solid rgba(124,108,224,0.3)",

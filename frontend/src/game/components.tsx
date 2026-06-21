@@ -9,6 +9,7 @@ import {
   SHAPES,
   tokens,
 } from "../ui";
+import { space, useMediaQuery, BREAKPOINT_GRID } from "../responsive";
 import type {
   DistributionEntry,
   LeaderboardEntry,
@@ -16,16 +17,18 @@ import type {
   PodiumEntry,
 } from "./types";
 
-// Full-screen pastel game stage (centered column).
+// Full-screen pastel game stage (centered column). Outer padding tightens on
+// phones via the .poll-stage class (responsive.tsx) so less width is wasted as
+// gutter on a ~380px screen.
 export function GameStage({ children }: { children: React.ReactNode }) {
   return (
     <div
+      className="poll-stage"
       style={{
         minHeight: "100vh",
         background: tokens.bg,
         fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif",
         color: tokens.ink,
-        padding: 20,
         boxSizing: "border-box",
         display: "flex",
         flexDirection: "column",
@@ -37,25 +40,26 @@ export function GameStage({ children }: { children: React.ReactNode }) {
   );
 }
 
-// Big circular countdown badge.
+// Compact circular countdown badge. Smaller on phones so it doesn't crowd the
+// prompt; the number itself scales via the .poll-countdown-num clamp.
 export function Countdown({ seconds }: { seconds: number | null }) {
   const danger = seconds !== null && seconds <= 5;
   return (
     <div
       style={{
-        width: 64,
-        height: 64,
+        width: 56,
+        height: 56,
+        flex: "0 0 auto",
         borderRadius: "50%",
         ...glass,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        fontSize: 24,
         fontWeight: 800,
         color: danger ? "#c0556a" : tokens.brandInk,
       }}
     >
-      {seconds ?? "—"}
+      <span className="poll-countdown-num">{seconds ?? "—"}</span>
     </div>
   );
 }
@@ -70,14 +74,25 @@ export function QuestionHeader({
 }) {
   const { t } = useTranslation("game");
   return (
-    <div style={{ ...glass, padding: "20px 22px", marginBottom: 16 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14 }}>
+    <div style={{ ...glass, padding: "16px 18px", marginBottom: space.lg }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: space.md,
+          flexWrap: "wrap",
+        }}
+      >
         <div style={{ fontSize: 12.5, fontWeight: 600, color: tokens.brandInk }}>
           {t("common.questionProgress", { current: question.index + 1, total: question.total })}
         </div>
         {right}
       </div>
-      <h1 style={{ fontSize: 24, fontWeight: 700, margin: "10px 0 0", lineHeight: 1.25 }}>
+      <h1
+        className="poll-prompt"
+        style={{ fontWeight: 700, margin: "10px 0 0", lineHeight: 1.25 }}
+      >
         {question.prompt || "—"}
       </h1>
       <QuestionImage src={question.image} />
@@ -230,18 +245,23 @@ export function Leaderboard({
   );
 }
 
-// Top-3 stylized podium.
+// Top-3 stylized podium. Columns shrink on phones so the top-3 fit a ~380px
+// screen without horizontal scroll.
 export function Podium({ podium }: { podium: PodiumEntry[] }) {
+  const narrow = useMediaQuery(`(max-width:${BREAKPOINT_GRID}px)`);
   const order = [1, 0, 2]; // 2nd, 1st, 3rd visual order
-  const heights = [120, 160, 96];
+  const heights = narrow ? [88, 116, 72] : [120, 160, 96];
+  const colW = narrow ? 96 : 130;
+  const placeholderW = narrow ? 84 : 110;
+  const gap = narrow ? space.sm : 14;
   const medals = ["🥇", "🥈", "🥉"];
   return (
-    <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 14, marginBottom: 8 }}>
+    <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", gap, marginBottom: 8 }}>
       {order.map((rankIdx) => {
         const entry = podium.find((p) => p.rank === rankIdx + 1);
-        if (!entry) return <div key={rankIdx} style={{ width: 110 }} />;
+        if (!entry) return <div key={rankIdx} style={{ width: placeholderW }} />;
         return (
-          <div key={entry.playerId} style={{ width: 130, textAlign: "center" }}>
+          <div key={entry.playerId} style={{ width: colW, textAlign: "center" }}>
             <div style={{ fontSize: 30, marginBottom: 4 }}>{medals[rankIdx]}</div>
             <div style={{ fontWeight: 700, marginBottom: 2, color: tokens.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {entry.nickname}

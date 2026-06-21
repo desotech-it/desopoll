@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Redis } from "ioredis";
 
 // Substitutable real-time layer. Game logic depends ONLY on this interface, never on
@@ -13,31 +14,56 @@ export interface RealtimeTransport {
   close(): Promise<void>;
 }
 
+// Wire envelope: carries the publishing process's origin id so the Redis redelivery
+// can be ignored for messages this pod already delivered to its local handlers.
+interface Envelope {
+  o: string; // origin process id
+  e: unknown; // the actual event
+}
+
 export class RedisRealtime implements RealtimeTransport {
   private handlers = new Map<string, Set<RealtimeHandler>>();
+  // Unique per backend process; lets us short-circuit same-pod delivery without
+  // double-dispatching when Redis echoes our own publish back on the sub connection.
+  private readonly origin = randomUUID();
 
   constructor(private pub: Redis, private sub: Redis) {
     this.sub.on("message", (channel, payload) => {
       const set = this.handlers.get(channel);
       if (!set || set.size === 0) return;
-      let event: unknown;
+      let parsed: Envelope | null;
       try {
-        event = JSON.parse(payload);
+        parsed = JSON.parse(payload) as Envelope;
       } catch {
-        event = payload;
+        parsed = null;
       }
-      for (const h of set) {
-        try {
-          h(event);
-        } catch (err) {
-          console.error(`[realtime] handler error on ${channel}`, err);
-        }
-      }
+      // We already delivered our own publishes synchronously in publish(); ignore the
+      // echo so same-pod sockets don't receive the event twice.
+      if (parsed && parsed.o === this.origin) return;
+      const event = parsed ? parsed.e : payload;
+      this.dispatch(set, event, channel);
     });
   }
 
+  private dispatch(set: Set<RealtimeHandler>, event: unknown, channel: string): void {
+    for (const h of set) {
+      try {
+        h(event);
+      } catch (err) {
+        console.error(`[realtime] handler error on ${channel}`, err);
+      }
+    }
+  }
+
   async publish(channel: string, event: unknown): Promise<void> {
-    await this.pub.publish(channel, JSON.stringify(event));
+    // Deliver to same-pod sockets synchronously so they don't wait for a Redis
+    // publish + pub/sub redelivery round-trip. Other pods still receive the event
+    // via the Redis fan-out below; the origin tag on the envelope makes this pod
+    // skip the echo so local sockets are not notified twice.
+    const set = this.handlers.get(channel);
+    if (set && set.size > 0) this.dispatch(set, event, channel);
+    const payload = JSON.stringify({ o: this.origin, e: event } satisfies Envelope);
+    await this.pub.publish(channel, payload);
   }
 
   async subscribe(channel: string, handler: RealtimeHandler): Promise<() => Promise<void>> {

@@ -108,24 +108,25 @@ function BigButton({
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 14,
+        gap: 12,
+        width: "100%",
         textAlign: "left",
         cursor: "pointer",
         border: selected ? `2px solid ${shape.color}` : "1px solid rgba(255,255,255,0.7)",
-        borderRadius: 18,
-        padding: "18px 18px",
+        borderRadius: 16,
+        padding: "15px 16px",
         background: selected ? shape.bg : "rgba(255,255,255,0.55)",
         backdropFilter: "blur(20px)",
         WebkitBackdropFilter: "blur(20px)",
         boxShadow: "0 10px 28px rgba(90,80,150,.14), inset 0 1px 0 rgba(255,255,255,.85)",
-        fontSize: 17,
+        fontSize: 16,
         fontWeight: 700,
         color: tokens.ink,
         fontFamily: "inherit",
       }}
     >
       <ShapeBadge index={index} size={40} />
-      <span>{text || "—"}</span>
+      <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{text || "—"}</span>
     </button>
   );
 }
@@ -138,7 +139,7 @@ function SingleChoice({
   onPick: (id: string) => void;
 }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+    <div className="poll-answer-grid">
       {options.map((o, i) => (
         <BigButton key={o.id} index={i} text={o.text} onClick={() => onPick(o.id)} />
       ))}
@@ -149,7 +150,7 @@ function SingleChoice({
 function TrueFalseButtons({ onPick }: { onPick: (v: boolean) => void }) {
   const { t } = useTranslation("game");
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+    <div className="poll-answer-grid">
       <BigButton index={3} text={t("common.trueLabel")} onClick={() => onPick(true)} />
       <BigButton index={0} text={t("common.falseLabel")} onClick={() => onPick(false)} />
     </div>
@@ -175,7 +176,7 @@ function MultiChoice({
   }
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      <div className="poll-answer-grid">
         {options.map((o, i) => (
           <BigButton key={o.id} index={i} text={o.text} selected={picked.has(o.id)} onClick={() => toggle(o.id)} />
         ))}

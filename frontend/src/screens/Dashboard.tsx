@@ -218,17 +218,9 @@ export function Dashboard() {
 }
 
 function CardGrid({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))",
-        gap: 18,
-      }}
-    >
-      {children}
-    </div>
-  );
+  // Single column on phones (no ragged right gutter / horizontal scroll),
+  // auto-fill tracks above the grid breakpoint — see .poll-card-grid.
+  return <div className="poll-card-grid">{children}</div>;
 }
 
 function PlusIcon() {

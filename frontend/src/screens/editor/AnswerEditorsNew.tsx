@@ -211,9 +211,9 @@ export function OrderingEditor({ spec, onChange }: { spec: AnswerSpec; onChange:
               disabled={ordered.length <= 2}
               title={t("answers.removeItem")}
               style={{
-                width: 32,
-                height: 32,
-                borderRadius: 9,
+                width: 40,
+                height: 40,
+                borderRadius: 10,
                 flex: "0 0 auto",
                 cursor: ordered.length <= 2 ? "default" : "pointer",
                 border: "1px solid rgba(192,85,106,0.22)",
@@ -262,9 +262,9 @@ function ReorderButton({
       title={label}
       aria-label={label}
       style={{
-        width: 32,
-        height: 32,
-        borderRadius: 9,
+        width: 40,
+        height: 40,
+        borderRadius: 10,
         flex: "0 0 auto",
         cursor: disabled ? "default" : "pointer",
         border: "1px solid rgba(124,108,224,0.3)",

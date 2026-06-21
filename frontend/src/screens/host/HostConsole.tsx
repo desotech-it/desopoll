@@ -72,14 +72,14 @@ export function HostConsole() {
           ...glass,
           display: "flex",
           alignItems: "center",
-          gap: 14,
-          padding: "12px 18px",
-          marginBottom: 18,
+          gap: 10,
+          padding: "10px 14px",
+          marginBottom: 16,
           flexWrap: "wrap",
         }}
       >
         <BrandMark size={18} />
-        <span style={{ fontSize: 14, fontWeight: 600, color: tokens.ink2, marginLeft: 4 }}>
+        <span style={{ fontSize: 14, fontWeight: 600, color: tokens.ink2, marginLeft: 2 }}>
           {snapshot.title || t("host.title")}
         </span>
         <LanguageSelector />
@@ -96,9 +96,30 @@ export function HostConsole() {
         {showAbort && <HostAbortButton send={(a) => send(a)} />}
       </div>
 
+      {/* Host-action failures (e.g. "not authenticated", "cannot lock from ...")
+          must fail LOUDLY, not as an easy-to-miss line — a silent lock failure
+          is exactly the "Mostra risultati does nothing" symptom (issue #7). */}
       {snapshot.error && (
-        <div style={{ marginBottom: 14 }}>
-          <ErrorBox message={snapshot.error} />
+        <div
+          role="alert"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            flexWrap: "wrap",
+            marginBottom: 16,
+            padding: "14px 18px",
+            borderRadius: 16,
+            background: "rgba(192,85,106,0.14)",
+            border: "2px solid rgba(192,85,106,0.4)",
+            color: "#a03050",
+            fontSize: 14.5,
+            fontWeight: 600,
+            boxShadow: "0 10px 28px rgba(192,85,106,0.18)",
+          }}
+        >
+          <span aria-hidden style={{ fontSize: 18 }}>⚠️</span>
+          <span style={{ flex: 1, minWidth: 0 }}>{snapshot.error}</span>
         </div>
       )}
 

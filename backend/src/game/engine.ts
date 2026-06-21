@@ -214,6 +214,36 @@ export async function joinPlayer(
   });
 }
 
+// Durable persistence for one accepted answer. Computed under the lock, then run AFTER
+// the lock releases so the answer INSERT + score UPDATE never serialize behind the next
+// host action or another player's answer. Fire-and-forget: failures don't affect play,
+// the authoritative live state already lives in the Redis runtime.
+interface AnswerWrite {
+  sessionId: string;
+  questionId: string;
+  playerId: string;
+  payload: AnswerPayload;
+  responseTimeMs: number;
+  correct: boolean;
+  partial: number;
+  points: number;
+}
+
+function persistAnswer(w: AnswerWrite): void {
+  // ON CONFLICT DO NOTHING keeps first-answer-wins durable even on a retry; we never
+  // re-credit the score because the in-memory bucket guard already rejected duplicates.
+  db()
+    .query(
+      `INSERT INTO answers (session_id, question_id, player_id, payload, response_time_ms, is_correct, partial_score, points_awarded)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT (session_id, question_id, player_id) DO NOTHING`,
+      [w.sessionId, w.questionId, w.playerId, JSON.stringify(w.payload), w.responseTimeMs, w.correct, w.partial, w.points],
+    )
+    .catch(() => {});
+  db()
+    .query(`UPDATE session_players SET score = score + $2 WHERE id = $1`, [w.playerId, w.points])
+    .catch(() => {});
+}
+
 // ---- Answer ----
 export async function submitAnswer(
   realtime: RealtimeTransport,
@@ -221,7 +251,13 @@ export async function submitAnswer(
   playerId: string,
   payload: AnswerPayload,
 ): Promise<{ ok: true } | { error: string }> {
-  return withLock(sessionId, async () => {
+  // Inside the lock we do ONLY the consistency-critical read-modify-write: grade, update
+  // the in-memory bucket+score, persist the Redis runtime, and publish 'answered'. The
+  // durable Postgres writes are returned and fired AFTER the lock so a flood of answers
+  // can't push a host's next/lock to the back of the persistence queue.
+  const res = await withLock(sessionId, async (): Promise<
+    { ok: true; write?: AnswerWrite } | { error: string }
+  > => {
     const rt = await loadRuntime(sessionId);
     if (!rt) return { error: "session not found" };
     if (!acceptsAnswers(rt.state)) return { error: "not accepting answers" };
@@ -247,21 +283,16 @@ export async function submitAnswer(
     bucket[playerId] = { playerId, correct, partial, points, responseTimeMs, payload };
     player.score += points;
     await saveRuntime(rt);
-
-    await db()
-      .query(
-        `INSERT INTO answers (session_id, question_id, player_id, payload, response_time_ms, is_correct, partial_score, points_awarded)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT (session_id, question_id, player_id) DO NOTHING`,
-        [sessionId, q.id, playerId, JSON.stringify(payload), responseTimeMs, correct, partial, points],
-      )
-      .catch(() => {});
-    await db()
-      .query(`UPDATE session_players SET score = score + $2 WHERE id = $1`, [playerId, points])
-      .catch(() => {});
-
-    await publish(realtime, rt, { type: "answered", count: Object.keys(bucket).length, total: Object.keys(rt.players).length });
-    return { ok: true };
+    await publish(realtime, rt, {
+      type: "answered",
+      count: Object.keys(bucket).length,
+      total: Object.keys(rt.players).length,
+    });
+    return { ok: true, write: { sessionId, questionId: q.id, playerId, payload, responseTimeMs, correct, partial, points } };
   });
+
+  if ("ok" in res && res.write) persistAnswer(res.write); // off the lock's critical path
+  return "ok" in res ? { ok: true } : res;
 }
 
 // ---- Host actions ----
@@ -271,7 +302,14 @@ export async function hostAction(
   hostId: string,
   action: HostAction,
 ): Promise<{ ok: true } | { error: string }> {
-  return withLock(sessionId, async () => {
+  // Critical path under the lock: validate, mutate the in-memory runtime, save the Redis
+  // runtime (so other pods/late joiners are consistent), then publish the gameplay event
+  // FIRST so players are unblocked immediately. The durable Postgres UPDATE (persistState)
+  // is deferred and fired AFTER the lock so a question/results/podium transition doesn't
+  // wait on a DB round-trip and doesn't keep the lock held while it runs.
+  const res = await withLock(sessionId, async (): Promise<
+    { ok: true; persist: StateWrite; teardownPin?: string } | { error: string }
+  > => {
     const rt = await loadRuntime(sessionId);
     if (!rt) return { error: "session not found" };
     if (rt.hostId !== hostId) return { error: "not the host" };
@@ -282,14 +320,14 @@ export async function hostAction(
       rt.currentIndex = action === "start" ? 0 : rt.currentIndex + 1;
       rt.questionStartedAt = Date.now();
       rt.state = next;
-      await persistState(rt);
       await saveRuntime(rt);
       const q = currentQuestion(rt)!;
       await publish(realtime, rt, { type: "question", question: publicQuestion(q, rt.questions.length), serverTime: Date.now() });
       await publish(realtime, rt, stateEvent(rt));
-    } else if (next === "question_results") {
+      return { ok: true, persist: stateWrite(rt) };
+    }
+    if (next === "question_results") {
       rt.state = next;
-      await persistState(rt);
       await saveRuntime(rt);
       const q = currentQuestion(rt)!;
       const results = resultsSnapshot(rt, q);
@@ -299,34 +337,58 @@ export async function hostAction(
       }
       await publish(realtime, rt, { type: "results", results, personalById });
       await publish(realtime, rt, stateEvent(rt));
-    } else if (next === "podium") {
+      return { ok: true, persist: stateWrite(rt) };
+    }
+    if (next === "podium") {
       rt.state = next;
-      await persistState(rt);
       await saveRuntime(rt);
       await publish(realtime, rt, { type: "podium", podium: podium(rt.players), leaderboard: leaderboard(rt.players) });
       await publish(realtime, rt, stateEvent(rt));
-    } else if (next === "ended" || next === "aborted") {
-      rt.state = next;
-      await persistState(rt);
-      await publish(realtime, rt, { type: next, leaderboard: leaderboard(rt.players) });
-      await publish(realtime, rt, stateEvent(rt));
-      await clearPin(rt.pin);
-      await deleteRuntime(rt.id);
+      return { ok: true, persist: stateWrite(rt) };
     }
-    return { ok: true };
+    // ended | aborted: publish first, persist + tear down the live runtime afterwards.
+    rt.state = next;
+    await publish(realtime, rt, { type: next, leaderboard: leaderboard(rt.players) });
+    await publish(realtime, rt, stateEvent(rt));
+    await deleteRuntime(rt.id);
+    return { ok: true, persist: stateWrite(rt), teardownPin: rt.pin };
   });
+
+  if ("error" in res) return res;
+  // Off the lock's critical path: durable Postgres state + pin cleanup, fire-and-forget.
+  persistState(res.persist);
+  if (res.teardownPin) void clearPin(res.teardownPin).catch(() => {});
+  return { ok: true };
 }
 
-async function persistState(rt: RuntimeSession): Promise<void> {
-  const started = rt.state === "question_active" && rt.currentIndex === 0;
-  const ended = rt.state === "ended" || rt.state === "aborted";
-  await db()
+// Durable game_sessions snapshot, captured under the lock and written afterwards so the
+// transition's Postgres round-trip stays off the lock's critical path.
+interface StateWrite {
+  id: string;
+  state: string;
+  currentIndex: number;
+  started: boolean;
+  ended: boolean;
+}
+
+function stateWrite(rt: RuntimeSession): StateWrite {
+  return {
+    id: rt.id,
+    state: rt.state,
+    currentIndex: rt.currentIndex,
+    started: rt.state === "question_active" && rt.currentIndex === 0,
+    ended: rt.state === "ended" || rt.state === "aborted",
+  };
+}
+
+function persistState(w: StateWrite): void {
+  db()
     .query(
       `UPDATE game_sessions SET state = $2, current_question = $3,
          started_at = COALESCE(started_at, CASE WHEN $4 THEN now() END),
          ended_at = CASE WHEN $5 THEN now() ELSE ended_at END
        WHERE id = $1`,
-      [rt.id, rt.state, rt.currentIndex, started, ended],
+      [w.id, w.state, w.currentIndex, w.started, w.ended],
     )
     .catch(() => {});
 }

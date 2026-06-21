@@ -145,8 +145,8 @@ export function QuestionEditor({
 
       <ImagePicker image={question.image} onChange={(image) => persist({ image })} />
 
-      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 18 }}>
-        <div style={{ minWidth: 140 }}>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 18 }}>
+        <div style={{ flex: "1 1 140px", minWidth: 130 }}>
           <label style={labelStyle}>{t("question.timeLimitLabel")}</label>
           <input
             type="number"
@@ -163,7 +163,7 @@ export function QuestionEditor({
             style={inputStyle}
           />
         </div>
-        <div style={{ minWidth: 180 }}>
+        <div style={{ flex: "1 1 160px", minWidth: 150 }}>
           <label style={labelStyle}>{t("question.pointsLabel")}</label>
           <select
             value={pointsMode}
@@ -179,7 +179,7 @@ export function QuestionEditor({
             <option value="none">{t("question.pointsNone")}</option>
           </select>
         </div>
-        <div style={{ minWidth: 200, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+        <div style={{ flex: "1 1 180px", minWidth: 170, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
           <label style={labelStyle}>{t("question.speedBonusLabel")}</label>
           <SpeedBonusToggle
             checked={speedBonus}

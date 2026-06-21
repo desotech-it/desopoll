@@ -80,9 +80,9 @@ export function PlayGame() {
           ...glass,
           display: "flex",
           alignItems: "center",
-          gap: 12,
-          padding: "10px 16px",
-          marginBottom: 18,
+          gap: 10,
+          padding: "10px 14px",
+          marginBottom: 16,
           flexWrap: "wrap",
         }}
       >

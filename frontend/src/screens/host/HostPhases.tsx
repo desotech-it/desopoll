@@ -39,19 +39,19 @@ function joinHint(): string {
 export function HostLobby({ snapshot, pin, send }: PhaseProps) {
   const { t } = useTranslation("game");
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ ...glass, padding: "28px 24px", textAlign: "center" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={{ ...glass, padding: "24px 18px", textAlign: "center" }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: tokens.brandInk, marginBottom: 6 }}>
           {t("host.joinAtPrefix")} <strong>{joinHint()}</strong>
         </div>
         <div style={{ fontSize: 14, color: tokens.muted, marginBottom: 10 }}>{t("host.gamePin")}</div>
         <div
+          className="poll-pin"
           style={{
-            fontSize: 60,
             fontWeight: 800,
-            letterSpacing: 8,
             color: tokens.brandInk,
             lineHeight: 1,
+            overflowWrap: "anywhere",
           }}
         >
           {pin}
@@ -131,12 +131,12 @@ export function HostActive({ snapshot, send }: PhaseProps) {
       ) : q.type === "true_false" ? (
         // Shape indices MUST match the player side (PlayPhases TrueFalseButtons):
         // Vero -> 3 (green square), Falso -> 0 (coral triangle).
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div className="poll-answer-grid">
           <OptionRow index={3} text={t("common.trueLabel")} />
           <OptionRow index={0} text={t("common.falseLabel")} />
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div className="poll-answer-grid">
           {q.options.map((o, i) => (
             <OptionRow key={o.id} index={i} text={o.text} />
           ))}
@@ -155,9 +155,11 @@ export function HostActive({ snapshot, send }: PhaseProps) {
 
 function OptionRow({ index, text }: { index: number; text: string }) {
   return (
-    <div style={{ ...glass, display: "flex", alignItems: "center", gap: 12, padding: "14px 16px" }}>
+    <div style={{ ...glass, display: "flex", alignItems: "center", gap: 12, padding: "12px 14px" }}>
       <ShapeBadge index={index} size={34} />
-      <span style={{ fontWeight: 600, color: tokens.ink, fontSize: 15 }}>{text || "—"}</span>
+      <span style={{ fontWeight: 600, color: tokens.ink, fontSize: 15, minWidth: 0, overflowWrap: "anywhere" }}>
+        {text || "—"}
+      </span>
     </div>
   );
 }

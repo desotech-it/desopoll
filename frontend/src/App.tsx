@@ -22,6 +22,7 @@ import { ReportScreen } from "./screens/report/ReportScreen";
 import { Join } from "./screens/Join";
 import { PlayGame } from "./screens/play/PlayGame";
 import { BrandMark, btnGhost, glass, pageStyle, Spinner, tokens } from "./ui";
+import { useIsNarrow } from "./responsive";
 
 export function App() {
   return (
@@ -82,9 +83,9 @@ function Shell() {
         path="/*"
         element={
           <div style={pageStyle}>
-            <div style={{ maxWidth: 1040, margin: "0 auto", padding: 24 }}>
+            <div className="poll-shell" style={{ maxWidth: 1040, margin: "0 auto" }}>
               <TopBar isAdmin={isAdmin} onLogout={logout} userEmail={user!.email} role={user!.role} />
-              <div style={{ marginTop: 26 }}>
+              <div style={{ marginTop: 22 }}>
                 <Routes>
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/quiz/:id" element={<QuizEditor />} />
@@ -122,6 +123,7 @@ function TopBar({
 }) {
   const { t } = useTranslation("common");
   const location = useLocation();
+  const narrow = useIsNarrow();
   const onDashboard = location.pathname === "/" || location.pathname.startsWith("/quiz");
   const onAdminUsers = location.pathname === "/admin/users" || location.pathname === "/admin";
   const onAdminGroups = location.pathname.startsWith("/admin/groups");
@@ -132,16 +134,16 @@ function TopBar({
         ...glass,
         display: "flex",
         alignItems: "center",
-        gap: 16,
-        padding: "12px 20px",
+        gap: narrow ? 8 : 16,
+        padding: narrow ? "10px 14px" : "12px 20px",
         flexWrap: "wrap",
       }}
     >
       <Link to="/" style={{ textDecoration: "none" }}>
-        <BrandMark size={20} />
+        <BrandMark size={narrow ? 17 : 20} />
       </Link>
 
-      <nav style={{ display: "flex", gap: 6, marginLeft: 12 }}>
+      <nav style={{ display: "flex", gap: 4, marginLeft: narrow ? 0 : 12, flexWrap: "wrap" }}>
         <NavLink to="/" active={onDashboard}>
           {t("nav.dashboard")}
         </NavLink>
@@ -157,14 +159,22 @@ function TopBar({
         )}
       </nav>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginLeft: "auto", flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: narrow ? 8 : 12, marginLeft: "auto" }}>
         <LanguageSelector />
-        <div style={{ textAlign: "right", lineHeight: 1.3 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: tokens.ink }}>{userEmail}</div>
-          <div style={{ fontSize: 11.5, color: tokens.brandInk }}>
+        {/* On phones hide the email (it forces an awkward extra row) and show
+            only the role; the full email stays on wider screens. */}
+        {narrow ? (
+          <span style={{ fontSize: 11.5, fontWeight: 600, color: tokens.brandInk }}>
             {role === "admin" ? t("roles.admin") : t("roles.user")}
+          </span>
+        ) : (
+          <div style={{ textAlign: "right", lineHeight: 1.3 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: tokens.ink }}>{userEmail}</div>
+            <div style={{ fontSize: 11.5, color: tokens.brandInk }}>
+              {role === "admin" ? t("roles.admin") : t("roles.user")}
+            </div>
           </div>
-        </div>
+        )}
         <button style={btnGhost} onClick={onLogout}>
           {t("actions.logout")}
         </button>
