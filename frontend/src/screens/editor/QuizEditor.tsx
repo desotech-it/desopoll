@@ -34,6 +34,7 @@ import { TypePicker } from "./TypePicker";
 import { QuestionEditor } from "./QuestionEditor";
 import { QuestionReadOnly } from "./QuestionReadOnly";
 import { ShareDialog } from "../share/ShareDialog";
+import { TranslationsDialog } from "./translations/TranslationsDialog";
 
 export function QuizEditor() {
   const { t } = useTranslation("editor");
@@ -51,6 +52,7 @@ export function QuizEditor() {
   const [launching, setLaunching] = useState(false);
   const [reordering, setReordering] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [translating, setTranslating] = useState(false);
 
   const editable = canEditFn(permission);
   const manageable = canManageFn(permission);
@@ -200,6 +202,19 @@ export function QuizEditor() {
           {t("allQuizzes")}
         </Link>
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          {editable && (
+            <button style={btnGhost} onClick={() => setTranslating(true)} title={t("translationsHint")}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 8l6 6" />
+                <path d="M4 14l6-6 2-3" />
+                <path d="M2 5h12" />
+                <path d="M7 2h1" />
+                <path d="M22 22l-5-10-5 10" />
+                <path d="M14 18h6" />
+              </svg>
+              {t("translations")}
+            </button>
+          )}
           {manageable && (
             <button style={btnGhost} onClick={() => setSharing(true)} title={t("shareHint")}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -336,6 +351,20 @@ export function QuizEditor() {
           quizTitle={quiz.title}
           isAdmin={isAdmin}
           onClose={() => setSharing(false)}
+        />
+      )}
+
+      {translating && (
+        <TranslationsDialog
+          quizId={id}
+          quizTitle={quiz.title}
+          baseLanguage={quiz.base_language}
+          questions={items}
+          initialAvailable={quiz.available_languages ?? [quiz.base_language]}
+          onClose={() => setTranslating(false)}
+          onLanguagesChange={(langs) =>
+            setQuiz((q) => (q ? { ...q, available_languages: langs } : q))
+          }
         />
       )}
     </div>

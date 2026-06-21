@@ -4,6 +4,8 @@ export default {
   allQuizzes: "← Todos los cuestionarios",
   share: "Compartir",
   shareHint: "Compartir este cuestionario",
+  translations: "Traducciones",
+  translationsHint: "Gestiona los idiomas y las traducciones del cuestionario",
   launch: "Iniciar partida",
   launching: "Iniciando…",
   launchEmptyHint: "Añade al menos una pregunta",

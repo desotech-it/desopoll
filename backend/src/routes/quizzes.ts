@@ -90,12 +90,29 @@ export async function registerQuizRoutes(app: FastifyInstance): Promise<void> {
     if (!quiz) return reply.code(404).send({ error: "not found" });
     if (!can(permission, "edit")) return forbiddenOrNotFound(reply, permission);
     const b = (req.body ?? {}) as Record<string, unknown>;
+
+    // available_languages, when provided, must be a string[]. We normalise (trim, dedupe) and
+    // always keep the (possibly updated) base_language in the set so a quiz can never end up
+    // unable to display its own base content.
+    const langs = normalizeAvailableLanguages(b.available_languages);
+    if (b.available_languages !== undefined && !langs) {
+      return reply.code(400).send({ error: "available_languages must be string[]" });
+    }
+    const nextBase =
+      typeof b.base_language === "string" && b.base_language.trim()
+        ? b.base_language.trim()
+        : (quiz.base_language as string);
+    const availableLanguages = langs
+      ? Array.from(new Set([nextBase, ...langs]))
+      : null;
+
     const { rows } = await db().query(
       `UPDATE quizzes SET
          title = COALESCE($2, title),
          description = COALESCE($3, description),
          is_public = COALESCE($4, is_public),
          base_language = COALESCE($5, base_language),
+         available_languages = COALESCE($6, available_languages),
          updated_at = now()
        WHERE id = $1 RETURNING *`,
       [
@@ -103,7 +120,8 @@ export async function registerQuizRoutes(app: FastifyInstance): Promise<void> {
         typeof b.title === "string" && b.title.trim() ? b.title.trim() : null,
         typeof b.description === "string" ? b.description : null,
         typeof b.is_public === "boolean" ? b.is_public : null,
-        typeof b.base_language === "string" ? b.base_language : null,
+        typeof b.base_language === "string" && b.base_language.trim() ? b.base_language.trim() : null,
+        availableLanguages,
       ],
     );
     return { quiz: rows[0] };
@@ -216,6 +234,22 @@ export async function registerQuizRoutes(app: FastifyInstance): Promise<void> {
     }
     return reply.code(201).send({ quiz: newQuiz });
   });
+}
+
+// Validate + normalise an available_languages input. Returns null when the field is absent
+// (so the caller leaves the column untouched) OR when it is an invalid type. The caller
+// distinguishes the two cases by also checking `b.available_languages !== undefined`.
+// Valid input → trimmed, de-duplicated, blank-dropped list (base_language re-added by caller).
+export function normalizeAvailableLanguages(value: unknown): string[] | null {
+  if (value === undefined || value === null) return null;
+  if (!Array.isArray(value)) return null;
+  const out: string[] = [];
+  for (const v of value) {
+    if (typeof v !== "string") return null;
+    const t = v.trim();
+    if (t && !out.includes(t)) out.push(t);
+  }
+  return out;
 }
 
 // When the quiz exists but the caller lacks the needed level: 403 if they can at least see it

@@ -10,6 +10,7 @@ import itGame from "./locales/it/game";
 import itReport from "./locales/it/report";
 import itShare from "./locales/it/share";
 import itQuestionTypes from "./locales/it/questionTypes";
+import itTranslations from "./locales/it/translations";
 
 import enCommon from "./locales/en/common";
 import enAuth from "./locales/en/auth";
@@ -20,6 +21,7 @@ import enGame from "./locales/en/game";
 import enReport from "./locales/en/report";
 import enShare from "./locales/en/share";
 import enQuestionTypes from "./locales/en/questionTypes";
+import enTranslations from "./locales/en/translations";
 
 import esCommon from "./locales/es/common";
 import esAuth from "./locales/es/auth";
@@ -30,6 +32,7 @@ import esGame from "./locales/es/game";
 import esReport from "./locales/es/report";
 import esShare from "./locales/es/share";
 import esQuestionTypes from "./locales/es/questionTypes";
+import esTranslations from "./locales/es/translations";
 
 export const NAMESPACES = [
   "common",
@@ -41,6 +44,7 @@ export const NAMESPACES = [
   "report",
   "share",
   "questionTypes",
+  "translations",
 ] as const;
 
 export const SUPPORTED_LANGUAGES = ["it", "en", "es"] as const;
@@ -57,6 +61,7 @@ export const resources = {
     report: itReport,
     share: itShare,
     questionTypes: itQuestionTypes,
+    translations: itTranslations,
   },
   en: {
     common: enCommon,
@@ -68,6 +73,7 @@ export const resources = {
     report: enReport,
     share: enShare,
     questionTypes: enQuestionTypes,
+    translations: enTranslations,
   },
   es: {
     common: esCommon,
@@ -79,5 +85,6 @@ export const resources = {
     report: esReport,
     share: esShare,
     questionTypes: esQuestionTypes,
+    translations: esTranslations,
   },
 } as const;

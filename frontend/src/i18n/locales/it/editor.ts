@@ -4,6 +4,8 @@ export default {
   allQuizzes: "← Tutti i quiz",
   share: "Condividi",
   shareHint: "Condividi questo quiz",
+  translations: "Traduzioni",
+  translationsHint: "Gestisci lingue e traduzioni del quiz",
   launch: "Avvia partita",
   launching: "Avvio…",
   launchEmptyHint: "Aggiungi almeno una domanda",

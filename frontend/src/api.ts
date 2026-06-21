@@ -164,7 +164,15 @@ export const quizzes = {
     request<{ quiz: Quiz; questions: Question[]; permission: Permission }>(`/api/quizzes/${id}`),
   update: (
     id: string,
-    body: { title?: string; description?: string; is_public?: boolean; base_language?: string },
+    body: {
+      title?: string;
+      description?: string;
+      is_public?: boolean;
+      base_language?: string;
+      // Issue #6: the set of languages this quiz can be played in. The backend
+      // trims, de-dupes and always keeps base_language in the set.
+      available_languages?: string[];
+    },
   ) => request<{ quiz: Quiz }>(`/api/quizzes/${id}`, { method: "PATCH", body }),
   remove: (id: string) => request<{ ok: true }>(`/api/quizzes/${id}`, { method: "DELETE" }),
   // Reorder questions: pass the full ordered list of question ids. Returns the
@@ -205,6 +213,47 @@ export const questions = {
   update: (qid: string, body: QuestionPatch) =>
     request<{ question: Question }>(`/api/questions/${qid}`, { method: "PATCH", body }),
   remove: (qid: string) => request<{ ok: true }>(`/api/questions/${qid}`, { method: "DELETE" }),
+};
+
+// ---- Content translations (issue #6) ----
+// A translatable entity is a quiz, a question, or an option. Option ids live
+// inside questions.answer_spec.options[].id (and .items[].id for ordering).
+export type TranslatableEntity = "quiz" | "question" | "option";
+
+// One translated string. `value` is the translation in `lang` for the given
+// field of the given entity. An empty/whitespace value clears the translation.
+export interface TranslationEntry {
+  entity_type: TranslatableEntity;
+  entity_id: string;
+  lang: string;
+  field: string; // quiz=>'title'|'description'; question=>'prompt'; option=>'text'
+  value: string;
+}
+
+export interface TranslationsResponse {
+  baseLanguage: string;
+  availableLanguages: string[];
+  entries: TranslationEntry[];
+}
+
+export interface TranslationsPutResult {
+  ok: true;
+  upserted: number;
+  deleted: number;
+}
+
+export const translations = {
+  // >=view. Returns ALL rows for the quiz + its questions + its options (every
+  // non-base language), ordered by entity_type, entity_id, lang, field.
+  get: (quizId: string) =>
+    request<TranslationsResponse>(`/api/quizzes/${quizId}/translations`),
+  // >=edit. Non-blank value => upsert; empty/whitespace value => delete that row.
+  // Runs in a single transaction on the backend.
+  put: (quizId: string, entries: TranslationEntry[]) =>
+    request<TranslationsPutResult>(`/api/quizzes/${quizId}/translations`, {
+      method: "PUT",
+      body: { entries },
+    }),
 };
 
 // ---- Sharing: shares, user search, groups (issue #4) ----

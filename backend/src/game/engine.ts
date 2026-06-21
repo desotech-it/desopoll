@@ -20,6 +20,12 @@ import { clearPin, deleteRuntime, loadRuntime, mapPin, saveRuntime } from "./sto
 import type { AnswerPayload, PointsMode, QuestionType } from "./types.js";
 import { getQuizAccess } from "../routes/quiz-access.js";
 import { can } from "../auth/permissions.js";
+import {
+  buildTranslationMap,
+  translateQuestions,
+  translateTitle,
+  type TranslationRow,
+} from "./translate.js";
 
 // ---- Per-session mutex (serializes read-modify-write on the runtime) ----
 const chains = new Map<string, Promise<unknown>>();
@@ -71,6 +77,43 @@ function toRuntimeQuestion(row: QuestionRow, index: number): RuntimeQuestion {
   };
 }
 
+// Load the content_translations rows for a single language across the quiz, its questions and
+// their options, in one round-trip. Option ids live inside questions.answer_spec.options[].id
+// (or .items[].id for ordering), so we resolve them from the question rows we already loaded.
+async function loadTranslations(
+  quizId: string,
+  questionRows: ReadonlyArray<QuestionRow>,
+  language: string,
+): Promise<TranslationRow[]> {
+  const optionIds = new Set<string>();
+  for (const q of questionRows) {
+    const spec = (q.answer_spec ?? {}) as Record<string, unknown>;
+    for (const key of ["options", "items"]) {
+      const arr = spec[key];
+      if (Array.isArray(arr)) {
+        for (const o of arr) {
+          if (o && typeof o === "object" && typeof (o as { id?: unknown }).id === "string") {
+            optionIds.add((o as { id: string }).id);
+          }
+        }
+      }
+    }
+  }
+  const questionIds = questionRows.map((q) => q.id);
+  const { rows } = await db().query<TranslationRow>(
+    `SELECT entity_type, entity_id, field, value
+       FROM content_translations
+      WHERE lang = $1
+        AND (
+          (entity_type = 'quiz'     AND entity_id = $2)
+          OR (entity_type = 'question' AND entity_id = ANY($3::uuid[]))
+          OR (entity_type = 'option'   AND entity_id = ANY($4::uuid[]))
+        )`,
+    [language, quizId, questionIds, Array.from(optionIds)],
+  );
+  return rows;
+}
+
 export async function createSession(
   opts: { quizId: string; hostId: string; language?: string },
 ): Promise<{ id: string; pin: string } | { error: string }> {
@@ -106,17 +149,31 @@ export async function createSession(
   }
   if (!sessionId) return { error: "could not allocate a pin" };
 
+  // Build base runtime questions, then overlay content translations when the session language
+  // differs from the quiz base language. Per-string fallback keeps any untranslated string in
+  // the base language. When language === base, this is a no-op (identical behaviour).
+  let title = quiz.title;
+  let questions = qRows.map(toRuntimeQuestion);
+  if (language !== quiz.base_language) {
+    const rows = await loadTranslations(opts.quizId, qRows, language);
+    if (rows.length > 0) {
+      const map = buildTranslationMap(rows);
+      title = translateTitle(map, opts.quizId, quiz.title);
+      questions = translateQuestions(map, questions);
+    }
+  }
+
   const rt: RuntimeSession = {
     id: sessionId,
     quizId: opts.quizId,
     hostId: opts.hostId,
     pin,
     language,
-    title: quiz.title,
+    title,
     state: "lobby",
     currentIndex: -1,
     questionStartedAt: null,
-    questions: qRows.map(toRuntimeQuestion),
+    questions,
     players: {},
     answers: {},
   };

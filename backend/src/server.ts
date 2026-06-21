@@ -15,6 +15,7 @@ import { registerGroupRoutes } from "./routes/groups.js";
 import { registerAdminRoutes } from "./routes/admin.js";
 import { registerSessionRoutes } from "./routes/sessions.js";
 import { registerReportRoutes } from "./routes/reports.js";
+import { registerTranslationRoutes } from "./routes/translations.js";
 import { registerGameWebsocket } from "./game/ws.js";
 
 export async function buildServer(env: Env, realtime: RealtimeTransport): Promise<FastifyInstance> {
@@ -41,6 +42,7 @@ export async function buildServer(env: Env, realtime: RealtimeTransport): Promis
   await registerAdminRoutes(app);
   await registerSessionRoutes(app);
   await registerReportRoutes(app);
+  await registerTranslationRoutes(app);
 
   // Liveness: process is up.
   app.get("/healthz", async () => ({ status: "ok" }));
