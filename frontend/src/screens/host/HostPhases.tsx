@@ -106,6 +106,9 @@ export function HostActive({ snapshot, send }: PhaseProps) {
   if (!q) return null;
   const sliderRange =
     Number.isFinite(q.min) && Number.isFinite(q.max) ? ` (${q.min}–${q.max})` : "";
+  // Ordering items ship under `items` (shuffled, no correctOrder); fall back to
+  // `options` for forward/back compat with older payloads.
+  const orderingItems = q.items ?? q.options;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <QuestionHeader question={q} right={<Countdown seconds={remaining} />} />
@@ -119,9 +122,9 @@ export function HostActive({ snapshot, send }: PhaseProps) {
       ) : q.type === "slider" ? (
         <HostWaitNote>{t("host.waitSlider", { range: sliderRange })}</HostWaitNote>
       ) : q.type === "ordering" ? (
-        q.options.length > 0 ? (
+        orderingItems.length > 0 ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {q.options.map((o, i) => (
+            {orderingItems.map((o, i) => (
               <OptionRow key={o.id} index={i} text={o.text} />
             ))}
           </div>
@@ -151,6 +154,13 @@ export function HostActive({ snapshot, send }: PhaseProps) {
       </div>
     </div>
   );
+}
+
+// Map an ordered list of item ids to their display labels using the question's
+// item list. Unknown ids fall back to the raw id so nothing silently disappears.
+function labelsForOrder(order: string[], items: { id: string; text: string }[]): string[] {
+  const byId = new Map(items.map((i) => [i.id, i.text]));
+  return order.map((id) => byId.get(id) || id);
 }
 
 function OptionRow({ index, text }: { index: number; text: string }) {
@@ -184,6 +194,12 @@ export function HostResults({ snapshot, send }: PhaseProps) {
     correctKeys.add(r.correctBoolean ? "true" : "false");
     correctKeys.add(String(r.correctBoolean));
   }
+  // ordering: reveal the right sequence by mapping the correctOrder ids to the
+  // item labels shipped in the question (items, falling back to options).
+  const orderingReveal =
+    q?.type === "ordering" && Array.isArray(r.correctOrder) && r.correctOrder.length > 0
+      ? labelsForOrder(r.correctOrder, q.items ?? q.options)
+      : null;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ ...glass, padding: "20px 22px" }}>
@@ -196,6 +212,18 @@ export function HostResults({ snapshot, send }: PhaseProps) {
           </div>
         )}
         <Distribution distribution={r.distribution} correctKeys={correctKeys} />
+        {orderingReveal && (
+          <div style={{ marginTop: 16 }}>
+            <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 10px", color: "#2f7d54" }}>
+              {t("host.correctOrder")}
+            </h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {orderingReveal.map((label, i) => (
+                <OptionRow key={i} index={i} text={label} />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div style={{ ...glass, padding: "20px 22px" }}>

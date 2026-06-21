@@ -41,6 +41,7 @@ export default {
     waitNumeric: "I partecipanti stanno inserendo un numero…",
     waitSlider: "I partecipanti stanno scegliendo un valore sul cursore{{range}}…",
     waitOrdering: "I partecipanti stanno ordinando gli elementi…",
+    correctOrder: "Ordine corretto",
   },
   player: {
     connecting: "Connessione alla partita…",

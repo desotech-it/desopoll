@@ -92,8 +92,13 @@ export function reduce(state: GameSnapshot, event: ServerEvent): GameSnapshot {
     case "joined":
       return { ...state, myPlayerId: event.playerId, error: null };
 
-    case "error":
-      return { ...state, error: event.message };
+    case "error": {
+      // Ignore late errors once the game is over (e.g. a post-game "session not found" from a
+      // reconnect after the session was torn down): the final standings are already shown and
+      // must not be replaced by a scary banner.
+      const over = state.state === "podium" || state.state === "ended" || state.state === "aborted";
+      return over ? state : { ...state, error: event.message };
+    }
 
     // answer_ack / pong are acknowledged but carry no state.
     case "answer_ack":

@@ -77,7 +77,7 @@ export function PlayAnswer({ snapshot, answered, onAnswer }: AnswerProps) {
       ) : q.type === "slider" ? (
         <SliderInput question={q} onSubmit={(value) => onAnswer({ value })} />
       ) : q.type === "ordering" ? (
-        <OrderingInput options={q.options} onSubmit={(order) => onAnswer({ order })} />
+        <OrderingInput items={q.items ?? q.options} onSubmit={(order) => onAnswer({ order })} />
       ) : q.type === "true_false" ? (
         <TrueFalseButtons onPick={(value) => onAnswer({ value })} />
       ) : q.type === "multiple_choice" ? (

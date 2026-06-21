@@ -41,6 +41,7 @@ export default {
     waitNumeric: "Participants are entering a number…",
     waitSlider: "Participants are choosing a value on the slider{{range}}…",
     waitOrdering: "Participants are ordering the items…",
+    correctOrder: "Correct order",
   },
   player: {
     connecting: "Connecting to the game…",

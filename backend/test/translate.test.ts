@@ -158,6 +158,26 @@ describe("translateQuestion — ordering items[]", () => {
     ]);
     expect(spec.correctOrder).toEqual(["i1", "i2"]);
   });
+
+  it("translates the runtime items presentation list (preserving shuffled order + ids)", () => {
+    const ordering = q({
+      id: "q2",
+      type: "ordering",
+      options: [],
+      answerSpec: { items: [{ id: "i1", text: "First" }, { id: "i2", text: "Second" }], correctOrder: ["i1", "i2"] },
+      // shuffled presentation order set by toRuntimeQuestion at build time
+      items: [{ id: "i2", text: "Second" }, { id: "i1", text: "First" }],
+    });
+    const map = buildTranslationMap([
+      { entity_type: "option", entity_id: "i1", field: "text", value: "Primo" },
+      { entity_type: "option", entity_id: "i2", field: "text", value: "Secondo" },
+    ]);
+    const out = translateQuestion(map, ordering);
+    expect(out.items).toEqual([
+      { id: "i2", text: "Secondo" },
+      { id: "i1", text: "Primo" },
+    ]);
+  });
 });
 
 describe("translateQuestions (list)", () => {

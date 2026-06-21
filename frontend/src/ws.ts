@@ -59,6 +59,10 @@ export interface GameSocket {
 
 export function useGameSocket(sessionId: string | null): GameSocket {
   const [snapshot, dispatch] = useReducer(reduce, initialSnapshot);
+  // Live mirror of the game state so onclose can decide whether to reconnect without
+  // re-subscribing the effect (which must stay keyed only on sessionId).
+  const stateRef = useRef(snapshot.state);
+  stateRef.current = snapshot.state;
   const socketRef = useRef<WebSocket | null>(null);
   const attemptsRef = useRef(0);
   const timersRef = useRef<{ ping?: number; reconnect?: number }>({});
@@ -111,8 +115,10 @@ export function useGameSocket(sessionId: string | null): GameSocket {
         if (socketRef.current === sock) socketRef.current = null;
         dispatch({ type: "close" });
         clearPing();
-        // Auto-reconnect (bounded) unless we closed it deliberately.
+        // Auto-reconnect (bounded) unless we closed it deliberately or the game is over
+        // (no point reconnecting after ended/aborted — and it avoids post-game churn).
         if (closedByUsRef.current || attemptsRef.current >= MAX_RECONNECT_ATTEMPTS) return;
+        if (stateRef.current === "ended" || stateRef.current === "aborted") return;
         const delay = reconnectDelay(attemptsRef.current);
         attemptsRef.current += 1;
         timersRef.current.reconnect = window.setTimeout(() => {

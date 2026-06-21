@@ -246,7 +246,7 @@ describe("hostAction", () => {
     expect(res).toEqual({ error: "cannot lock from lobby" });
   });
 
-  it("end from podium publishes 'ended', tears down the runtime", async () => {
+  it("end from podium publishes 'ended' and keeps the terminal runtime for post-game snapshots", async () => {
     const rt = seedRuntime({ state: "podium", currentIndex: 0 });
     await saveRuntime(rt);
     const { transport, events } = fakeTransport();
@@ -254,6 +254,64 @@ describe("hostAction", () => {
     const res = await hostAction(transport, "sess-1", HOST, "end");
     expect(res).toEqual({ ok: true });
     expect(events[0].event.type).toBe("ended");
-    expect(await loadRuntime("sess-1")).toBeNull(); // runtime deleted
+    // Runtime is KEPT (it has a TTL) so post-game reconnects see the final state instead of
+    // "session not found"; only the PIN is released.
+    const after = await loadRuntime("sess-1");
+    expect(after?.state).toBe("ended");
+  });
+
+  it("start broadcasts ordering items (shuffled, no correctOrder) and slider range", async () => {
+    const rt = seedRuntime({
+      state: "lobby",
+      currentIndex: -1,
+      questions: [
+        {
+          id: "qord",
+          index: 0,
+          type: "ordering",
+          prompt: "order",
+          image: null,
+          timeLimitSec: 20,
+          pointsMode: "standard",
+          speedBonus: false,
+          answerSpec: { items: [{ id: "a", text: "1" }, { id: "b", text: "2" }, { id: "c", text: "3" }], correctOrder: ["a", "b", "c"] } as never,
+          options: [],
+          items: [{ id: "c", text: "3" }, { id: "a", text: "1" }, { id: "b", text: "2" }],
+        },
+        {
+          id: "qsld",
+          index: 1,
+          type: "slider",
+          prompt: "year",
+          image: null,
+          timeLimitSec: 20,
+          pointsMode: "standard",
+          speedBonus: false,
+          answerSpec: { min: 1900, max: 2025, step: 5, answer: 1969, tolerance: 1 } as never,
+          options: [],
+          min: 1900,
+          max: 2025,
+          step: 5,
+        },
+      ],
+    });
+    await saveRuntime(rt);
+    const { transport, events } = fakeTransport();
+
+    await hostAction(transport, "sess-1", HOST, "start");
+    const qEvent = events.find((e) => e.event.type === "question")!.event;
+    expect(qEvent.question.type).toBe("ordering");
+    expect(qEvent.question.items.map((i: { id: string }) => i.id).sort()).toEqual(["a", "b", "c"]);
+    expect(JSON.stringify(qEvent)).not.toContain("correctOrder");
+
+    // Advance to the slider question: lock the current one (→ results), then next.
+    await hostAction(transport, "sess-1", HOST, "lock");
+    const { transport: t2, events: e2 } = fakeTransport();
+    await hostAction(t2, "sess-1", HOST, "next");
+    const sEvent = e2.find((e) => e.event.type === "question")!.event;
+    expect(sEvent.question.type).toBe("slider");
+    expect(sEvent.question).toMatchObject({ min: 1900, max: 2025, step: 5 });
+    expect(JSON.stringify(sEvent)).not.toContain("answer");
+    expect(JSON.stringify(sEvent)).not.toContain("tolerance");
   });
 });

@@ -12,11 +12,11 @@ import {
   type RuntimeQuestion,
   type RuntimeSession,
 } from "./runtime.js";
-import { optionsOf } from "./runtime.js";
+import { optionsOf, shuffledItemsOf, sliderRangeOf } from "./runtime.js";
 import { computePoints } from "./scoring.js";
 import { acceptsAnswers, type HostAction, resolveHostAction } from "./state.js";
 import { leaderboard, podium, publicQuestion, resultsSnapshot } from "./snapshots.js";
-import { clearPin, deleteRuntime, loadRuntime, mapPin, saveRuntime } from "./store.js";
+import { clearPin, loadRuntime, mapPin, saveRuntime } from "./store.js";
 import type { AnswerPayload, PointsMode, QuestionType } from "./types.js";
 import { getQuizAccess } from "../routes/quiz-access.js";
 import { can } from "../auth/permissions.js";
@@ -63,7 +63,7 @@ interface QuestionRow {
 
 function toRuntimeQuestion(row: QuestionRow, index: number): RuntimeQuestion {
   const spec = (row.answer_spec ?? {}) as never;
-  return {
+  const q: RuntimeQuestion = {
     id: row.id,
     index,
     type: row.type,
@@ -75,6 +75,20 @@ function toRuntimeQuestion(row: QuestionRow, index: number): RuntimeQuestion {
     answerSpec: spec,
     options: optionsOf(spec),
   };
+  // ordering: shuffle the items ONCE at build time and store the presentation order on the
+  // runtime question, so it stays stable across reconnects/late joiners and never equals
+  // correctOrder. publicQuestion reads q.items.
+  if (row.type === "ordering") {
+    q.items = shuffledItemsOf(spec);
+  }
+  // slider: carry the player-facing scale (min/max/step), not the correct answer/tolerance.
+  if (row.type === "slider") {
+    const range = sliderRangeOf(spec);
+    q.min = range.min;
+    q.max = range.max;
+    q.step = range.step;
+  }
+  return q;
 }
 
 // Load the content_translations rows for a single language across the quiz, its questions and
@@ -346,11 +360,13 @@ export async function hostAction(
       await publish(realtime, rt, stateEvent(rt));
       return { ok: true, persist: stateWrite(rt) };
     }
-    // ended | aborted: publish first, persist + tear down the live runtime afterwards.
+    // ended | aborted: KEEP the runtime in Redis (it has a TTL) and save the terminal state,
+    // so post-game reconnects / late snapshots return the final standings instead of
+    // "session not found". Only the active PIN is released afterwards (so it can be reused).
     rt.state = next;
+    await saveRuntime(rt);
     await publish(realtime, rt, { type: next, leaderboard: leaderboard(rt.players) });
     await publish(realtime, rt, stateEvent(rt));
-    await deleteRuntime(rt.id);
     return { ok: true, persist: stateWrite(rt), teardownPin: rt.pin };
   });
 

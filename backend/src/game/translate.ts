@@ -80,7 +80,14 @@ export function translateQuestion(map: TranslationMap, q: RuntimeQuestion): Runt
     answerSpec = { ...(spec as object), items: specItems } as RuntimeQuestion["answerSpec"];
   }
 
-  return { ...q, prompt, options, answerSpec };
+  // ordering: the runtime carries a shuffled `items` presentation list the player reorders;
+  // translate its text too (preserving the shuffled order + ids) so players see translated
+  // labels. Non-ordering questions have no `items` and pass through unchanged.
+  const items = q.items
+    ? q.items.map((o) => ({ id: o.id, text: pick(map, "option", o.id, "text", o.text) }))
+    : q.items;
+
+  return { ...q, prompt, options, answerSpec, items };
 }
 
 // Convenience: translate a whole list of questions.

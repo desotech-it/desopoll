@@ -101,15 +101,17 @@ export function SliderInput({
 }
 
 // ---- ordering: { order:[id,...] } ----
+// `items` are the shuffled elements to arrange (from publicQuestion.items). The
+// player reorders them and submits their ids in the chosen sequence.
 export function OrderingInput({
-  options,
+  items: initialItems,
   onSubmit,
 }: {
-  options: LiveOption[];
+  items: LiveOption[];
   onSubmit: (order: string[]) => void;
 }) {
   const { t } = useTranslation("game");
-  const [items, setItems] = useState<LiveOption[]>(options);
+  const [items, setItems] = useState<LiveOption[]>(initialItems);
   function move(idx: number, dir: -1 | 1) {
     const j = idx + dir;
     if (j < 0 || j >= items.length) return;

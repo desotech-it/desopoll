@@ -10,6 +10,13 @@ export interface PublicQuestion {
   image: unknown | null;
   timeLimitSec: number;
   options: { id: string; text: string }[];
+  // ordering: the items to arrange, in the SHUFFLED presentation order computed at build time
+  // (no correctOrder — correctness never reaches players). Present only for ordering.
+  items?: { id: string; text: string }[];
+  // slider: the UI scale (no answer/tolerance). Present only for slider.
+  min?: number;
+  max?: number;
+  step?: number;
 }
 
 export interface LeaderboardRow {
@@ -25,9 +32,12 @@ export interface DistributionBucket {
   count: number;
 }
 
-// Strip everything correctness-related before sending a question to players.
+// Strip everything correctness-related before sending a question to players. Per type we
+// expose ONLY what the player needs to answer: choice/poll → options; ordering → the shuffled
+// items to arrange (never correctOrder); slider → the min/max/step scale (never answer/
+// tolerance). Other types need nothing beyond prompt + their fixed control.
 export function publicQuestion(q: RuntimeQuestion, total: number): PublicQuestion {
-  return {
+  const pub: PublicQuestion = {
     index: q.index,
     total,
     type: q.type,
@@ -36,6 +46,15 @@ export function publicQuestion(q: RuntimeQuestion, total: number): PublicQuestio
     timeLimitSec: q.timeLimitSec,
     options: q.options.map((o) => ({ id: o.id, text: o.text })),
   };
+  if (q.type === "ordering" && Array.isArray(q.items)) {
+    pub.items = q.items.map((o) => ({ id: o.id, text: o.text }));
+  }
+  if (q.type === "slider") {
+    if (typeof q.min === "number") pub.min = q.min;
+    if (typeof q.max === "number") pub.max = q.max;
+    if (typeof q.step === "number") pub.step = q.step;
+  }
+  return pub;
 }
 
 export function leaderboard(players: Record<string, RuntimePlayer>): LeaderboardRow[] {
@@ -95,6 +114,35 @@ export function distribution(
     }
     return frequencyBuckets(keys);
   }
+  if (q.type === "ordering") {
+    // Per-option counting is meaningless for ordering. Bucket players by how their submitted
+    // sequence compares to correctOrder: exact match / partially correct / all wrong.
+    const correctOrder = Array.isArray((q.answerSpec as { correctOrder?: unknown }).correctOrder)
+      ? ((q.answerSpec as { correctOrder: string[] }).correctOrder)
+      : [];
+    const buckets = { exact: 0, partial: 0, none: 0 };
+    for (const a of values) {
+      const order = Array.isArray((a.payload as { order?: unknown })?.order)
+        ? ((a.payload as { order: string[] }).order)
+        : [];
+      let inPlace = 0;
+      for (let i = 0; i < correctOrder.length; i++) {
+        if (order[i] === correctOrder[i]) inPlace++;
+      }
+      if (correctOrder.length > 0 && inPlace === correctOrder.length && order.length === correctOrder.length) {
+        buckets.exact++;
+      } else if (inPlace > 0) {
+        buckets.partial++;
+      } else {
+        buckets.none++;
+      }
+    }
+    return [
+      { key: "exact", label: "Ordine corretto", count: buckets.exact },
+      { key: "partial", label: "Parzialmente corretto", count: buckets.partial },
+      { key: "none", label: "Ordine errato", count: buckets.none },
+    ];
+  }
   // single_choice / multiple_choice / poll — count per option id.
   return q.options.map((o) => {
     let count = 0;
@@ -111,6 +159,9 @@ export interface ResultsSnapshot {
   index: number;
   correctOptionIds: string[];
   correctBoolean?: boolean;
+  // ordering: the right sequence (item ids in order) so the host can display it on results.
+  // Safe to surface here — results is a host/post-answer view, not the player answer payload.
+  correctOrder?: string[];
   distribution: DistributionBucket[];
   answeredCount: number;
   leaderboard: LeaderboardRow[];
@@ -119,13 +170,16 @@ export interface ResultsSnapshot {
 // Results screen: distribution + which answer was right + standings.
 export function resultsSnapshot(rt: RuntimeSession, q: RuntimeQuestion): ResultsSnapshot {
   const answers = rt.answers[q.index] ?? {};
-  const spec = q.answerSpec as { correct?: unknown };
+  const spec = q.answerSpec as { correct?: unknown; correctOrder?: unknown };
   const correctOptionIds = Array.isArray(spec.correct) ? (spec.correct as string[]) : [];
   const correctBoolean = typeof spec.correct === "boolean" ? spec.correct : undefined;
+  const correctOrder =
+    q.type === "ordering" && Array.isArray(spec.correctOrder) ? (spec.correctOrder as string[]) : undefined;
   return {
     index: q.index,
     correctOptionIds,
     correctBoolean,
+    correctOrder,
     distribution: distribution(q, answers),
     answeredCount: Object.keys(answers).length,
     leaderboard: leaderboard(rt.players),

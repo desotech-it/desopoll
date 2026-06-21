@@ -68,14 +68,21 @@ describe("OrderingInput", () => {
 
   it("submits the initial order unchanged", () => {
     const onSubmit = vi.fn();
-    render(<OrderingInput options={opts} onSubmit={onSubmit} />);
+    render(<OrderingInput items={opts} onSubmit={onSubmit} />);
     fireEvent.click(screen.getByRole("button", { name: /Conferma ordine/ }));
     expect(onSubmit).toHaveBeenCalledWith(["a", "b", "c"]);
   });
 
+  it("renders every broadcast item so the player can reorder them", () => {
+    render(<OrderingInput items={opts} onSubmit={() => {}} />);
+    expect(screen.getByText("Primo")).toBeInTheDocument();
+    expect(screen.getByText("Secondo")).toBeInTheDocument();
+    expect(screen.getByText("Terzo")).toBeInTheDocument();
+  });
+
   it("reorders items with the move-down arrow", () => {
     const onSubmit = vi.fn();
-    render(<OrderingInput options={opts} onSubmit={onSubmit} />);
+    render(<OrderingInput items={opts} onSubmit={onSubmit} />);
     // First "Sposta giù" belongs to the first item (Primo) → swaps a and b.
     const downs = screen.getAllByLabelText("Sposta giù");
     fireEvent.click(downs[0]);
@@ -83,8 +90,18 @@ describe("OrderingInput", () => {
     expect(onSubmit).toHaveBeenCalledWith(["b", "a", "c"]);
   });
 
+  it("reorders items with the move-up arrow", () => {
+    const onSubmit = vi.fn();
+    render(<OrderingInput items={opts} onSubmit={onSubmit} />);
+    // Last "Sposta su" belongs to the last item (Terzo) → swaps b and c.
+    const ups = screen.getAllByLabelText("Sposta su");
+    fireEvent.click(ups[ups.length - 1]);
+    fireEvent.click(screen.getByRole("button", { name: /Conferma ordine/ }));
+    expect(onSubmit).toHaveBeenCalledWith(["a", "c", "b"]);
+  });
+
   it("shows a fallback when there are no items", () => {
-    render(<OrderingInput options={[]} onSubmit={() => {}} />);
+    render(<OrderingInput items={[]} onSubmit={() => {}} />);
     expect(screen.getByText(/Nessun elemento/)).toBeInTheDocument();
   });
 });

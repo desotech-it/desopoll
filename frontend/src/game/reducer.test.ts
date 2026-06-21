@@ -222,6 +222,14 @@ describe("reduce — state / joined / error / acks", () => {
     expect(s.error).toBe("PIN scaduto");
   });
 
+  it("ignores a late error once the game is over (post-game 'session not found')", () => {
+    for (const over of ["podium", "ended", "aborted"] as const) {
+      const ended = reduce(initialSnapshot, { type: over === "podium" ? "podium" : over, leaderboard: [], podium: [] } as ServerEvent);
+      const after = reduce(ended, { type: "error", message: "session not found" });
+      expect(after.error).toBeNull();
+    }
+  });
+
   it("answer_ack and pong leave state unchanged", () => {
     const base = reduce(initialSnapshot, { type: "joined", playerId: "p1" });
     expect(reduce(base, { type: "answer_ack" })).toBe(base);

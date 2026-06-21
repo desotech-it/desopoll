@@ -26,8 +26,10 @@ export interface LiveOption {
 }
 
 // A question as broadcast to clients (NO correct answers — anti-cheat).
-// `options` carries the choosable items for choice/poll/ordering. Slider bounds
-// (min/max/step) are optional extras the player control reads when present.
+// `options` carries the choosable items for choice/poll. `items` carries the
+// ordering elements to arrange, in the server-SHUFFLED presentation order (never
+// the correctOrder). Slider bounds (min/max/step) are optional extras the player
+// control reads when present.
 export interface LiveQuestion {
   index: number;
   total: number;
@@ -36,6 +38,8 @@ export interface LiveQuestion {
   image?: string | null;
   timeLimitSec: number;
   options: LiveOption[];
+  // ordering: shuffled items to reorder (present only for ordering questions).
+  items?: LiveOption[];
   min?: number;
   max?: number;
   step?: number;
@@ -58,6 +62,9 @@ export interface QuestionResults {
   index: number;
   correctOptionIds: string[];
   correctBoolean?: boolean;
+  // ordering: the correct sequence (item ids in order) so the host can reveal it
+  // on the results screen. Present only for ordering questions.
+  correctOrder?: string[];
   distribution: DistributionEntry[];
   answeredCount: number;
   leaderboard: LeaderboardEntry[];
