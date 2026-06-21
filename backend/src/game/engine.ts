@@ -18,6 +18,8 @@ import { acceptsAnswers, type HostAction, resolveHostAction } from "./state.js";
 import { leaderboard, podium, publicQuestion, resultsSnapshot } from "./snapshots.js";
 import { clearPin, deleteRuntime, loadRuntime, mapPin, saveRuntime } from "./store.js";
 import type { AnswerPayload, PointsMode, QuestionType } from "./types.js";
+import { getQuizAccess } from "../routes/quiz-access.js";
+import { can } from "../auth/permissions.js";
 
 // ---- Per-session mutex (serializes read-modify-write on the runtime) ----
 const chains = new Map<string, Promise<unknown>>();
@@ -72,12 +74,10 @@ function toRuntimeQuestion(row: QuestionRow, index: number): RuntimeQuestion {
 export async function createSession(
   opts: { quizId: string; hostId: string; language?: string },
 ): Promise<{ id: string; pin: string } | { error: string }> {
-  const { rows: quizRows } = await db().query(
-    `SELECT id, title, base_language FROM quizzes WHERE id = $1 AND owner_id = $2`,
-    [opts.quizId, opts.hostId],
-  );
-  const quiz = quizRows[0];
+  // Hosting a live session requires >=play permission (owner, or shared at play/edit/manage).
+  const { quiz, permission } = await getQuizAccess(opts.quizId, opts.hostId);
   if (!quiz) return { error: "quiz not found" };
+  if (!can(permission, "play")) return { error: "quiz not found" };
 
   const { rows: qRows } = await db().query<QuestionRow>(
     `SELECT id, type, prompt, image, time_limit_sec, points_mode, speed_bonus, answer_spec

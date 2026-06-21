@@ -98,6 +98,23 @@ export function QuizMetaEditor({
   );
 }
 
+// Read-only quiz meta header, shown when the caller cannot edit the quiz.
+export function QuizMetaReadOnly({ quiz }: { quiz: Quiz }) {
+  return (
+    <div style={{ ...glass, padding: "22px 24px" }}>
+      <h1 style={{ margin: "0 0 8px", fontSize: 22, fontWeight: 700, color: tokens.ink }}>
+        {quiz.title}
+      </h1>
+      <p style={{ margin: 0, fontSize: 14, color: tokens.ink3, lineHeight: 1.5 }}>
+        {quiz.description || "Nessuna descrizione."}
+      </p>
+      <div style={{ marginTop: 12 }}>
+        {quiz.is_public ? <Chip tone="green">Pubblico</Chip> : <Chip tone="violet">Privato</Chip>}
+      </div>
+    </div>
+  );
+}
+
 export function Toggle({
   checked,
   onChange,

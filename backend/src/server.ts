@@ -8,6 +8,10 @@ import { redis } from "./redis.js";
 import { type RealtimeTransport } from "./realtime.js";
 import { registerAuthRoutes } from "./auth/routes.js";
 import { registerQuizRoutes } from "./routes/quizzes.js";
+import { registerQuestionRoutes } from "./routes/questions.js";
+import { registerShareRoutes } from "./routes/shares.js";
+import { registerUserRoutes } from "./routes/users.js";
+import { registerGroupRoutes } from "./routes/groups.js";
 import { registerAdminRoutes } from "./routes/admin.js";
 import { registerSessionRoutes } from "./routes/sessions.js";
 import { registerReportRoutes } from "./routes/reports.js";
@@ -30,6 +34,10 @@ export async function buildServer(env: Env, realtime: RealtimeTransport): Promis
 
   await registerAuthRoutes(app, env);
   await registerQuizRoutes(app);
+  await registerQuestionRoutes(app);
+  await registerShareRoutes(app);
+  await registerUserRoutes(app);
+  await registerGroupRoutes(app);
   await registerAdminRoutes(app);
   await registerSessionRoutes(app);
   await registerReportRoutes(app);

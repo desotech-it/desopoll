@@ -13,6 +13,7 @@ import { Login } from "./screens/Login";
 import { Dashboard } from "./screens/Dashboard";
 import { QuizEditor } from "./screens/QuizEditor";
 import { AdminUsers } from "./screens/AdminUsers";
+import { AdminGroups } from "./screens/admin/AdminGroups";
 import { HostConsole } from "./screens/host/HostConsole";
 import { ReportScreen } from "./screens/report/ReportScreen";
 import { Join } from "./screens/Join";
@@ -81,6 +82,10 @@ function Shell() {
                     path="/admin/users"
                     element={isAdmin ? <AdminUsers /> : <Navigate to="/" replace />}
                   />
+                  <Route
+                    path="/admin/groups"
+                    element={isAdmin ? <AdminGroups /> : <Navigate to="/" replace />}
+                  />
                   <Route path="/admin" element={<Navigate to="/admin/users" replace />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
@@ -106,7 +111,8 @@ function TopBar({
 }) {
   const location = useLocation();
   const onDashboard = location.pathname === "/" || location.pathname.startsWith("/quiz");
-  const onAdmin = location.pathname.startsWith("/admin");
+  const onAdminUsers = location.pathname === "/admin/users" || location.pathname === "/admin";
+  const onAdminGroups = location.pathname.startsWith("/admin/groups");
 
   return (
     <div
@@ -128,8 +134,13 @@ function TopBar({
           Dashboard
         </NavLink>
         {isAdmin && (
-          <NavLink to="/admin/users" active={onAdmin}>
+          <NavLink to="/admin/users" active={onAdminUsers}>
             Admin
+          </NavLink>
+        )}
+        {isAdmin && (
+          <NavLink to="/admin/groups" active={onAdminGroups}>
+            Gruppi
           </NavLink>
         )}
       </nav>

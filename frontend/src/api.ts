@@ -1,6 +1,9 @@
 // Typed fetch helpers for the desopoll backend (same origin, session cookie auth).
 // Every request uses credentials:"include" so the session cookie is sent.
 
+import type { Permission } from "./permissions";
+export type { Permission };
+
 // ---- Types ----
 export type Role = "admin" | "user" | string;
 export type Status = "active" | "suspended" | "invited" | string;
@@ -79,6 +82,12 @@ export interface Quiz {
   is_public: boolean;
   updated_at: string;
   question_count?: number;
+  // Sharing (issue #4): owner rows have owned=true & permission='manage'; shared
+  // rows have owned=false and the caller's effective level. owner_id identifies
+  // the owner. Older endpoints (e.g. duplicate) may omit these, so optional.
+  owner_id?: string;
+  owned?: boolean;
+  permission?: Permission;
 }
 
 // ---- Core request helper ----
@@ -148,7 +157,8 @@ export const quizzes = {
   list: () => request<{ quizzes: Quiz[] }>("/api/quizzes"),
   create: (body: { title: string; description?: string; base_language?: string }) =>
     request<{ quiz: Quiz }>("/api/quizzes", { method: "POST", body }),
-  get: (id: string) => request<{ quiz: Quiz; questions: Question[] }>(`/api/quizzes/${id}`),
+  get: (id: string) =>
+    request<{ quiz: Quiz; questions: Question[]; permission: Permission }>(`/api/quizzes/${id}`),
   update: (
     id: string,
     body: { title?: string; description?: string; is_public?: boolean; base_language?: string },
@@ -192,6 +202,45 @@ export const questions = {
   update: (qid: string, body: QuestionPatch) =>
     request<{ question: Question }>(`/api/questions/${qid}`, { method: "PATCH", body }),
   remove: (qid: string) => request<{ ok: true }>(`/api/questions/${qid}`, { method: "DELETE" }),
+};
+
+// ---- Sharing: shares, user search, groups (issue #4) ----
+export type SubjectType = "user" | "group";
+
+export interface Share {
+  id: string;
+  subject_type: SubjectType;
+  subject_id: string;
+  permission: Permission;
+  granted_by: string | null;
+  granted_at: string;
+  // Resolved display fields (email for users, name for groups).
+  subject_label: string;
+  subject_display_name: string | null;
+}
+
+export interface UserSearchResult {
+  id: string;
+  email: string;
+  display_name: string | null;
+}
+
+export const shares = {
+  // manage-gated: list current shares for a quiz.
+  list: (quizId: string) =>
+    request<{ shares: Share[] }>(`/api/quizzes/${quizId}/shares`),
+  // manage-gated: upsert a share for a user/group at a permission level.
+  add: (quizId: string, body: { subjectType: SubjectType; subjectId: string; permission: Permission }) =>
+    request<{ share: Share }>(`/api/quizzes/${quizId}/shares`, { method: "POST", body }),
+  // manage-gated: revoke a share.
+  remove: (quizId: string, shareId: string) =>
+    request<{ ok: true }>(`/api/quizzes/${quizId}/shares/${shareId}`, { method: "DELETE" }),
+};
+
+export const users = {
+  // Any authenticated user: typeahead search (max 10).
+  search: (q: string) =>
+    request<{ users: UserSearchResult[] }>(`/api/users/search?q=${encodeURIComponent(q)}`),
 };
 
 // ---- Sessions (live games) ----
@@ -274,6 +323,24 @@ export const sessions = {
   report: (id: string) => request<SessionReport>(`/api/sessions/${id}/report`),
 };
 
+// ---- Admin: groups (issue #4) ----
+export interface Group {
+  id: string;
+  name: string;
+  description: string | null;
+  color: string | null;
+  created_at: string;
+  member_count: number;
+}
+
+export interface GroupMember {
+  id: string;
+  email: string;
+  display_name: string | null;
+  role_in_group: string | null;
+  added_at: string;
+}
+
 // ---- Admin users ----
 export const admin = {
   listUsers: () => request<{ users: AdminUser[] }>("/api/admin/users"),
@@ -281,4 +348,19 @@ export const admin = {
     request<{ user: AdminUser }>("/api/admin/users", { method: "POST", body }),
   updateUser: (id: string, body: { role?: Role; status?: Status; display_name?: string }) =>
     request<{ user: AdminUser }>(`/api/admin/users/${id}`, { method: "PATCH", body }),
+
+  // Groups (admin only).
+  groups: {
+    list: () => request<{ groups: Group[] }>("/api/admin/groups"),
+    create: (body: { name: string; description?: string; color?: string }) =>
+      request<{ group: Group }>("/api/admin/groups", { method: "POST", body }),
+    remove: (id: string) =>
+      request<{ ok: true }>(`/api/admin/groups/${id}`, { method: "DELETE" }),
+    members: (id: string) =>
+      request<{ members: GroupMember[] }>(`/api/admin/groups/${id}/members`),
+    addMember: (id: string, body: { userId: string; roleInGroup?: string }) =>
+      request<{ member: GroupMember }>(`/api/admin/groups/${id}/members`, { method: "POST", body }),
+    removeMember: (id: string, userId: string) =>
+      request<{ ok: true }>(`/api/admin/groups/${id}/members/${userId}`, { method: "DELETE" }),
+  },
 };

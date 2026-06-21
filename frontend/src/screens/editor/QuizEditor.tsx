@@ -12,29 +12,47 @@ import {
 } from "../../api";
 import { defaultAnswerSpec } from "../../questionTypes";
 import {
+  canEdit as canEditFn,
+  canManage as canManageFn,
+  canPlay as canPlayFn,
+  type Permission,
+} from "../../permissions";
+import {
   btnGhost,
   btnPrimary,
+  Chip,
   ErrorBox,
   glass,
   glassSoft,
   Spinner,
   tokens,
 } from "../../ui";
-import { QuizMetaEditor } from "./QuizMeta";
+import { useAuth } from "../../auth";
+import { QuizMetaEditor, QuizMetaReadOnly } from "./QuizMeta";
 import { TypePicker } from "./TypePicker";
 import { QuestionEditor } from "./QuestionEditor";
+import { QuestionReadOnly } from "./QuestionReadOnly";
+import { ShareDialog } from "../share/ShareDialog";
 
 export function QuizEditor() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [items, setItems] = useState<Question[]>([]);
+  const [permission, setPermission] = useState<Permission | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [adding, setAdding] = useState(false);
   const [launching, setLaunching] = useState(false);
   const [reordering, setReordering] = useState(false);
+  const [sharing, setSharing] = useState(false);
+
+  const editable = canEditFn(permission);
+  const manageable = canManageFn(permission);
+  const playable = canPlayFn(permission);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -42,6 +60,7 @@ export function QuizEditor() {
     try {
       const data = await quizzes.get(id);
       setQuiz(data.quiz);
+      setPermission(data.permission);
       setItems([...data.questions].sort((a, b) => a.position - b.position));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Errore nel caricamento del quiz.");
@@ -178,18 +197,54 @@ export function QuizEditor() {
         <Link to="/" style={btnGhost}>
           ← Tutti i quiz
         </Link>
-        <button
-          style={{ ...btnPrimary, opacity: launching || items.length === 0 ? 0.6 : 1 }}
-          disabled={launching || items.length === 0}
-          onClick={launchGame}
-          title={items.length === 0 ? "Aggiungi almeno una domanda" : "Avvia una partita dal vivo"}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <polygon points="6 4 20 12 6 20 6 4" fill="currentColor" />
-          </svg>
-          {launching ? "Avvio…" : "Avvia partita"}
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          {manageable && (
+            <button style={btnGhost} onClick={() => setSharing(true)} title="Condividi questo quiz">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="18" cy="5" r="3" />
+                <circle cx="6" cy="12" r="3" />
+                <circle cx="18" cy="19" r="3" />
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+              </svg>
+              Condividi
+            </button>
+          )}
+          {playable && (
+            <button
+              style={{ ...btnPrimary, opacity: launching || items.length === 0 ? 0.6 : 1 }}
+              disabled={launching || items.length === 0}
+              onClick={launchGame}
+              title={items.length === 0 ? "Aggiungi almeno una domanda" : "Avvia una partita dal vivo"}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <polygon points="6 4 20 12 6 20 6 4" fill="currentColor" />
+              </svg>
+              {launching ? "Avvio…" : "Avvia partita"}
+            </button>
+          )}
+        </div>
       </div>
+
+      {!editable && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            marginBottom: 16,
+            padding: "10px 14px",
+            borderRadius: 14,
+            background: "rgba(130,190,255,.16)",
+            border: "1px solid rgba(255,255,255,0.6)",
+            fontSize: 13,
+            color: tokens.ink2,
+          }}
+        >
+          <Chip tone="sky">Sola lettura</Chip>
+          <span>Hai accesso in sola lettura a questo quiz. Non puoi modificarlo.</span>
+        </div>
+      )}
 
       {error && (
         <div style={{ marginBottom: 16 }}>
@@ -197,7 +252,11 @@ export function QuizEditor() {
         </div>
       )}
 
-      <QuizMetaEditor quiz={quiz} onPatch={patchQuiz} />
+      {editable ? (
+        <QuizMetaEditor quiz={quiz} onPatch={patchQuiz} />
+      ) : (
+        <QuizMetaReadOnly quiz={quiz} />
+      )}
 
       <div
         style={{
@@ -215,7 +274,7 @@ export function QuizEditor() {
             {items.length}
           </span>
         </h2>
-        {!showTypePicker && (
+        {editable && !showTypePicker && (
           <button style={btnPrimary} onClick={() => setShowTypePicker(true)}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <line x1="12" y1="5" x2="12" y2="19" />
@@ -226,7 +285,7 @@ export function QuizEditor() {
         )}
       </div>
 
-      {showTypePicker && (
+      {editable && showTypePicker && (
         <TypePicker
           adding={adding}
           onPick={addQuestion}
@@ -236,31 +295,46 @@ export function QuizEditor() {
 
       {items.length === 0 && !showTypePicker ? (
         <div style={{ ...glassSoft, borderRadius: 22, padding: "40px 24px", textAlign: "center" }}>
-          <p style={{ color: tokens.muted, margin: "0 0 18px", fontSize: 14 }}>
+          <p style={{ color: tokens.muted, margin: editable ? "0 0 18px" : 0, fontSize: 14 }}>
             Questo quiz non ha ancora domande.
           </p>
-          <button style={btnPrimary} onClick={() => setShowTypePicker(true)}>
-            Aggiungi la prima domanda
-          </button>
+          {editable && (
+            <button style={btnPrimary} onClick={() => setShowTypePicker(true)}>
+              Aggiungi la prima domanda
+            </button>
+          )}
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {items.map((q, i) => (
-            <QuestionEditor
-              key={q.id}
-              index={i}
-              question={q}
-              onSaved={onQuestionSaved}
-              onDelete={() => deleteQuestion(q)}
-              onError={setError}
-              onMoveUp={() => moveQuestion(i, -1)}
-              onMoveDown={() => moveQuestion(i, 1)}
-              canMoveUp={i > 0}
-              canMoveDown={i < items.length - 1}
-              reordering={reordering}
-            />
-          ))}
+          {items.map((q, i) =>
+            editable ? (
+              <QuestionEditor
+                key={q.id}
+                index={i}
+                question={q}
+                onSaved={onQuestionSaved}
+                onDelete={() => deleteQuestion(q)}
+                onError={setError}
+                onMoveUp={() => moveQuestion(i, -1)}
+                onMoveDown={() => moveQuestion(i, 1)}
+                canMoveUp={i > 0}
+                canMoveDown={i < items.length - 1}
+                reordering={reordering}
+              />
+            ) : (
+              <QuestionReadOnly key={q.id} index={i} question={q} />
+            ),
+          )}
         </div>
+      )}
+
+      {sharing && (
+        <ShareDialog
+          quizId={id}
+          quizTitle={quiz.title}
+          isAdmin={isAdmin}
+          onClose={() => setSharing(false)}
+        />
       )}
     </div>
   );
