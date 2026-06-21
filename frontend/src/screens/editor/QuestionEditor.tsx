@@ -1,5 +1,6 @@
 // Per-question editor: prompt, time limit, points mode, image + per-type answer.
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   questions as questionsApi,
   type AnswerSpec,
@@ -37,6 +38,7 @@ export function QuestionEditor({
   canMoveDown: boolean;
   reordering: boolean;
 }) {
+  const { t } = useTranslation("editor");
   const [prompt, setPrompt] = useState(question.prompt);
   const [timeLimit, setTimeLimit] = useState(question.time_limit_sec);
   const [pointsMode, setPointsMode] = useState<PointsMode>(question.points_mode);
@@ -76,10 +78,10 @@ export function QuestionEditor({
         flashSaved();
       } catch (e) {
         setSavingState("idle");
-        onError(e instanceof Error ? e.message : "Salvataggio della domanda non riuscito.");
+        onError(e instanceof Error ? e.message : t("errorSaveQuestion"));
       }
     },
-    [question.id, onSaved, onError, flashSaved],
+    [question.id, onSaved, onError, flashSaved, t],
   );
 
   // Persist a spec change immediately (option add/remove, correct toggles, etc.).
@@ -115,10 +117,10 @@ export function QuestionEditor({
         <span style={{ fontSize: 12, color: tokens.ink3 }}>{answerSummary(question.type, spec)}</span>
         <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
           {savingState === "saving" && (
-            <span style={{ fontSize: 12, color: tokens.hint }}>Salvataggio…</span>
+            <span style={{ fontSize: 12, color: tokens.hint }}>{t("common:actions.saving")}</span>
           )}
           {savingState === "saved" && (
-            <span style={{ fontSize: 12, color: "#2f7d54" }}>✓ Salvato</span>
+            <span style={{ fontSize: 12, color: "#2f7d54" }}>{t("common:actions.saved")}</span>
           )}
           <QuestionToolbar
             canMoveUp={canMoveUp}
@@ -131,13 +133,13 @@ export function QuestionEditor({
         </span>
       </div>
 
-      <label style={labelStyle}>Testo della domanda</label>
+      <label style={labelStyle}>{t("question.promptLabel")}</label>
       <textarea
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
         onBlur={() => prompt !== question.prompt && persist({ prompt })}
         rows={Math.min(8, Math.max(2, Math.ceil(prompt.length / 70)))}
-        placeholder="Scrivi qui la domanda (anche lunga, stile VMware/AWS)…"
+        placeholder={t("question.promptPlaceholder")}
         style={{ ...inputStyle, resize: "vertical", lineHeight: 1.5, marginBottom: 16 }}
       />
 
@@ -145,7 +147,7 @@ export function QuestionEditor({
 
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 18 }}>
         <div style={{ minWidth: 140 }}>
-          <label style={labelStyle}>Tempo limite (sec)</label>
+          <label style={labelStyle}>{t("question.timeLimitLabel")}</label>
           <input
             type="number"
             min={5}
@@ -162,7 +164,7 @@ export function QuestionEditor({
           />
         </div>
         <div style={{ minWidth: 180 }}>
-          <label style={labelStyle}>Punteggio</label>
+          <label style={labelStyle}>{t("question.pointsLabel")}</label>
           <select
             value={pointsMode}
             onChange={(e) => {
@@ -172,13 +174,13 @@ export function QuestionEditor({
             }}
             style={{ ...inputStyle, cursor: "pointer" }}
           >
-            <option value="standard">Standard</option>
-            <option value="double">Doppio</option>
-            <option value="none">Nessun punteggio</option>
+            <option value="standard">{t("question.pointsStandard")}</option>
+            <option value="double">{t("question.pointsDouble")}</option>
+            <option value="none">{t("question.pointsNone")}</option>
           </select>
         </div>
         <div style={{ minWidth: 200, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-          <label style={labelStyle}>Bonus velocità</label>
+          <label style={labelStyle}>{t("question.speedBonusLabel")}</label>
           <SpeedBonusToggle
             checked={speedBonus}
             disabled={pointsMode === "none"}
@@ -204,6 +206,7 @@ function SpeedBonusToggle({
   disabled?: boolean;
   onChange: (v: boolean) => void;
 }) {
+  const { t } = useTranslation("editor");
   return (
     <button
       type="button"
@@ -217,9 +220,9 @@ function SpeedBonusToggle({
         color: checked && !disabled ? "#2f7d54" : tokens.ink3,
         background: checked && !disabled ? "rgba(152,226,182,0.18)" : "rgba(255,255,255,0.6)",
       }}
-      title={disabled ? "Disponibile solo con punteggio attivo" : "Punti extra per le risposte rapide"}
+      title={disabled ? t("question.speedBonusDisabledHint") : t("question.speedBonusHint")}
     >
-      {checked ? "Attivo" : "Disattivato"}
+      {checked ? t("question.speedBonusOn") : t("question.speedBonusOff")}
     </button>
   );
 }

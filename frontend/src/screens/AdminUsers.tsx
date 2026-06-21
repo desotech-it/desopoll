@@ -1,5 +1,6 @@
 // Admin → Users (/admin/users) — table of users with create + inline role/status edit.
 import React, { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { admin, ApiError, type AdminUser, type Role, type Status } from "../api";
 import {
   btnGhost,
@@ -14,21 +15,31 @@ import {
   tokens,
 } from "../ui";
 
-const ROLE_OPTIONS: { value: Role; label: string }[] = [
-  { value: "user", label: "Utente" },
-  { value: "admin", label: "Admin" },
-];
-const STATUS_OPTIONS: { value: Status; label: string }[] = [
-  { value: "active", label: "Attivo" },
-  { value: "suspended", label: "Sospeso" },
-  { value: "invited", label: "Invitato" },
-];
+// Known role/status values (used to detect custom/legacy values from the server
+// so they still render in the select). Labels come from the translations below.
+const ROLE_VALUES: Role[] = ["user", "admin"];
+const STATUS_VALUES: Status[] = ["active", "suspended", "invited"];
 
-function roleLabel(r: Role) {
-  return ROLE_OPTIONS.find((o) => o.value === r)?.label ?? r;
+// Localized role/status option lists, built from the active translations.
+type TFn = (key: string) => string;
+function roleOptions(t: TFn): { value: Role; label: string }[] {
+  return [
+    { value: "user", label: t("users.roleUser") },
+    { value: "admin", label: t("users.roleAdmin") },
+  ];
 }
-function statusLabel(s: Status) {
-  return STATUS_OPTIONS.find((o) => o.value === s)?.label ?? s;
+function statusOptions(t: TFn): { value: Status; label: string }[] {
+  return [
+    { value: "active", label: t("users.statusActive") },
+    { value: "suspended", label: t("users.statusSuspended") },
+    { value: "invited", label: t("users.statusInvited") },
+  ];
+}
+function roleLabel(t: TFn, r: Role) {
+  return roleOptions(t).find((o) => o.value === r)?.label ?? r;
+}
+function statusLabel(t: TFn, s: Status) {
+  return statusOptions(t).find((o) => o.value === s)?.label ?? s;
 }
 
 const selectStyle: React.CSSProperties = {
@@ -41,6 +52,7 @@ const selectStyle: React.CSSProperties = {
 };
 
 export function AdminUsers() {
+  const { t } = useTranslation("admin");
   const [users, setUsers] = useState<AdminUser[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
@@ -57,11 +69,11 @@ export function AdminUsers() {
         setForbidden(true);
         setUsers([]);
       } else {
-        setError(e instanceof Error ? e.message : "Errore nel caricamento degli utenti.");
+        setError(e instanceof Error ? e.message : t("users.errorLoad"));
         setUsers([]);
       }
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void load();
@@ -74,7 +86,7 @@ export function AdminUsers() {
       const { user } = await admin.updateUser(id, body);
       setUsers((prev) => (prev ? prev.map((u) => (u.id === id ? { ...u, ...user } : u)) : prev));
     } catch (e) {
-      window.alert(e instanceof ApiError ? e.message : "Aggiornamento non riuscito.");
+      window.alert(e instanceof ApiError ? e.message : t("users.errorUpdate"));
       void load(); // revert to server truth
     }
   }
@@ -88,9 +100,9 @@ export function AdminUsers() {
     return (
       <div style={{ ...glass, padding: "40px 28px", textAlign: "center" }}>
         <div style={{ fontSize: 36, marginBottom: 10 }}>🔒</div>
-        <h2 style={{ fontSize: 19, fontWeight: 700, margin: "0 0 6px" }}>Accesso negato</h2>
+        <h2 style={{ fontSize: 19, fontWeight: 700, margin: "0 0 6px" }}>{t("forbiddenTitle")}</h2>
         <p style={{ color: tokens.muted, margin: 0, fontSize: 14 }}>
-          Solo gli amministratori possono gestire gli utenti.
+          {t("users.forbiddenBody")}
         </p>
       </div>
     );
@@ -109,9 +121,9 @@ export function AdminUsers() {
         }}
       >
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, margin: "0 0 4px" }}>Utenti</h1>
+          <h1 style={{ fontSize: 24, fontWeight: 700, margin: "0 0 4px" }}>{t("users.title")}</h1>
           <p style={{ color: tokens.muted, margin: 0, fontSize: 14 }}>
-            {users ? `${users.length} utenti registrati` : "Gestione utenti"}
+            {users ? t("users.count", { count: users.length }) : t("users.fallback")}
           </p>
         </div>
         {!showForm && (
@@ -120,7 +132,7 @@ export function AdminUsers() {
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
-            Nuovo utente
+            {t("users.newUser")}
           </button>
         )}
       </div>
@@ -135,22 +147,22 @@ export function AdminUsers() {
 
       {users === null ? (
         <div style={{ ...glass, padding: 8 }}>
-          <Spinner label="Caricamento degli utenti…" />
+          <Spinner label={t("users.loading")} />
         </div>
       ) : users.length === 0 && !error ? (
         <div style={{ ...glassSoft, borderRadius: 22, padding: "40px 24px", textAlign: "center", color: tokens.muted }}>
-          Nessun utente.
+          {t("users.empty")}
         </div>
       ) : (
         <div style={{ ...glass, padding: "8px 10px", overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14, minWidth: 720 }}>
             <thead>
               <tr style={{ textAlign: "left", color: tokens.ink3 }}>
-                <th style={thStyle}>Email</th>
-                <th style={thStyle}>Nome</th>
-                <th style={thStyle}>Ruolo</th>
-                <th style={thStyle}>Stato</th>
-                <th style={thStyle}>Password</th>
+                <th style={thStyle}>{t("users.colEmail")}</th>
+                <th style={thStyle}>{t("users.colName")}</th>
+                <th style={thStyle}>{t("users.colRole")}</th>
+                <th style={thStyle}>{t("users.colStatus")}</th>
+                <th style={thStyle}>{t("users.colPassword")}</th>
               </tr>
             </thead>
             <tbody>
@@ -165,15 +177,15 @@ export function AdminUsers() {
                       value={u.role}
                       onChange={(e) => updateUser(u.id, { role: e.target.value as Role })}
                       style={selectStyle}
-                      aria-label={`Ruolo di ${u.email}`}
+                      aria-label={t("users.roleAria", { email: u.email })}
                     >
-                      {ROLE_OPTIONS.map((o) => (
+                      {roleOptions(t).map((o) => (
                         <option key={o.value} value={o.value}>
                           {o.label}
                         </option>
                       ))}
-                      {!ROLE_OPTIONS.some((o) => o.value === u.role) && (
-                        <option value={u.role}>{roleLabel(u.role)}</option>
+                      {!ROLE_VALUES.includes(u.role) && (
+                        <option value={u.role}>{roleLabel(t, u.role)}</option>
                       )}
                     </select>
                   </td>
@@ -182,20 +194,20 @@ export function AdminUsers() {
                       value={u.status}
                       onChange={(e) => updateUser(u.id, { status: e.target.value as Status })}
                       style={selectStyle}
-                      aria-label={`Stato di ${u.email}`}
+                      aria-label={t("users.statusAria", { email: u.email })}
                     >
-                      {STATUS_OPTIONS.map((o) => (
+                      {statusOptions(t).map((o) => (
                         <option key={o.value} value={o.value}>
                           {o.label}
                         </option>
                       ))}
-                      {!STATUS_OPTIONS.some((o) => o.value === u.status) && (
-                        <option value={u.status}>{statusLabel(u.status)}</option>
+                      {!STATUS_VALUES.includes(u.status) && (
+                        <option value={u.status}>{statusLabel(t, u.status)}</option>
                       )}
                     </select>
                   </td>
                   <td style={tdStyle}>
-                    {u.has_password ? <Chip tone="green">Impostata</Chip> : <Chip tone="amber">Assente</Chip>}
+                    {u.has_password ? <Chip tone="green">{t("users.passwordSet")}</Chip> : <Chip tone="amber">{t("users.passwordMissing")}</Chip>}
                   </td>
                 </tr>
               ))}
@@ -223,6 +235,7 @@ function CreateUserForm({
   onCreated: (u: AdminUser) => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation("admin");
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [role, setRole] = useState<Role>("user");
@@ -244,9 +257,9 @@ function CreateUserForm({
       onCreated(user);
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
-        setError("Esiste già un utente con questa email.");
+        setError(t("users.errorDuplicate"));
       } else {
-        setError(err instanceof Error ? err.message : "Creazione non riuscita.");
+        setError(err instanceof Error ? err.message : t("users.errorCreate"));
       }
     } finally {
       setBusy(false);
@@ -255,11 +268,11 @@ function CreateUserForm({
 
   return (
     <form onSubmit={submit} style={{ ...glass, padding: "22px 24px", marginBottom: 22 }}>
-      <h3 style={{ margin: "0 0 18px", fontSize: 16, fontWeight: 700 }}>Nuovo utente</h3>
+      <h3 style={{ margin: "0 0 18px", fontSize: 16, fontWeight: 700 }}>{t("users.formTitle")}</h3>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 16 }}>
         <div>
           <label style={labelStyle} htmlFor="nu-email">
-            Email *
+            {t("users.emailLabel")}
           </label>
           <input
             id="nu-email"
@@ -268,27 +281,27 @@ function CreateUserForm({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             style={inputStyle}
-            placeholder="nome@azienda.it"
+            placeholder={t("users.emailPlaceholder")}
           />
         </div>
         <div>
           <label style={labelStyle} htmlFor="nu-name">
-            Nome visualizzato
+            {t("users.nameLabel")}
           </label>
           <input
             id="nu-name"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             style={inputStyle}
-            placeholder="Mario Rossi"
+            placeholder={t("users.namePlaceholder")}
           />
         </div>
         <div>
           <label style={labelStyle} htmlFor="nu-role">
-            Ruolo
+            {t("users.roleLabel")}
           </label>
           <select id="nu-role" value={role} onChange={(e) => setRole(e.target.value as Role)} style={{ ...inputStyle, cursor: "pointer" }}>
-            {ROLE_OPTIONS.map((o) => (
+            {roleOptions(t).map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
               </option>
@@ -297,7 +310,7 @@ function CreateUserForm({
         </div>
         <div>
           <label style={labelStyle} htmlFor="nu-pass">
-            Password iniziale
+            {t("users.passwordLabel")}
           </label>
           <input
             id="nu-pass"
@@ -305,7 +318,7 @@ function CreateUserForm({
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             style={inputStyle}
-            placeholder="Opzionale"
+            placeholder={t("users.passwordPlaceholder")}
             autoComplete="new-password"
           />
         </div>
@@ -319,10 +332,10 @@ function CreateUserForm({
 
       <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
         <button type="submit" disabled={busy || !email.trim()} style={{ ...btnPrimary, opacity: busy || !email.trim() ? 0.6 : 1 }}>
-          {busy ? "Creazione…" : "Crea utente"}
+          {busy ? t("users.creating") : t("users.createUser")}
         </button>
         <button type="button" style={btnGhost} onClick={onCancel}>
-          Annulla
+          {t("common:actions.cancel")}
         </button>
       </div>
     </form>

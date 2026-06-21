@@ -2,6 +2,7 @@
 // Answer submission is owned here; the container passes a send() + tracks the
 // "have I answered this round" flag.
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { btnPrimary, glass, glassSoft, ShapeBadge, SHAPES, tokens } from "../../ui";
 import { Countdown, Leaderboard, Podium, QuestionHeader, QuestionImage } from "../../game/components";
 import { useCountdown } from "../../game/useCountdown";
@@ -15,12 +16,13 @@ import {
 } from "./PlayInputs";
 
 export function PlayLobby({ nickname }: { nickname: string }) {
+  const { t } = useTranslation("game");
   return (
     <div style={{ ...glass, padding: "40px 28px", textAlign: "center" }}>
       <div style={{ fontSize: 40, marginBottom: 12 }}>✨</div>
-      <h1 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 6px" }}>Sei dentro!</h1>
+      <h1 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 6px" }}>{t("player.lobbyTitle")}</h1>
       <p style={{ color: tokens.muted, margin: "0 0 18px", fontSize: 15 }}>
-        Attendi l'avvio della partita…
+        {t("player.lobbyBody")}
       </p>
       <span
         style={{
@@ -45,6 +47,7 @@ interface AnswerProps {
 }
 
 export function PlayAnswer({ snapshot, answered, onAnswer }: AnswerProps) {
+  const { t } = useTranslation("game");
   const q = snapshot.question;
   const remaining = useCountdown(q?.timeLimitSec, snapshot.questionServerTime);
   if (!q) return null;
@@ -55,8 +58,8 @@ export function PlayAnswer({ snapshot, answered, onAnswer }: AnswerProps) {
         <QuestionHeader question={q} right={<Countdown seconds={remaining} />} />
         <div style={{ ...glass, padding: "32px 24px", textAlign: "center" }}>
           <div style={{ fontSize: 34, marginBottom: 8 }}>✅</div>
-          <h2 style={{ fontSize: 19, fontWeight: 700, margin: 0 }}>Risposta inviata</h2>
-          <p style={{ color: tokens.muted, margin: "6px 0 0", fontSize: 14 }}>Attendi gli altri…</p>
+          <h2 style={{ fontSize: 19, fontWeight: 700, margin: 0 }}>{t("player.answerSent")}</h2>
+          <p style={{ color: tokens.muted, margin: "6px 0 0", fontSize: 14 }}>{t("player.waitOthers")}</p>
         </div>
       </div>
     );
@@ -144,10 +147,11 @@ function SingleChoice({
 }
 
 function TrueFalseButtons({ onPick }: { onPick: (v: boolean) => void }) {
+  const { t } = useTranslation("game");
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-      <BigButton index={3} text="Vero" onClick={() => onPick(true)} />
-      <BigButton index={0} text="Falso" onClick={() => onPick(false)} />
+      <BigButton index={3} text={t("common.trueLabel")} onClick={() => onPick(true)} />
+      <BigButton index={0} text={t("common.falseLabel")} onClick={() => onPick(false)} />
     </div>
   );
 }
@@ -159,6 +163,7 @@ function MultiChoice({
   options: { id: string; text: string }[];
   onSubmit: (ids: string[]) => void;
 }) {
+  const { t } = useTranslation("game");
   const [picked, setPicked] = useState<Set<string>>(new Set());
   function toggle(id: string) {
     setPicked((prev) => {
@@ -180,13 +185,14 @@ function MultiChoice({
         disabled={picked.size === 0}
         onClick={() => onSubmit([...picked])}
       >
-        Conferma ({picked.size})
+        {t("player.confirm", { count: picked.size })}
       </button>
     </div>
   );
 }
 
 function OpenTextInput({ onSubmit }: { onSubmit: (text: string) => void }) {
+  const { t } = useTranslation("game");
   const [text, setText] = useState("");
   return (
     <form
@@ -200,8 +206,8 @@ function OpenTextInput({ onSubmit }: { onSubmit: (text: string) => void }) {
         autoFocus
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="Scrivi la tua risposta…"
-        aria-label="Risposta"
+        placeholder={t("player.openTextPlaceholder")}
+        aria-label={t("player.answerAria")}
         style={{
           fontFamily: "inherit",
           fontSize: 18,
@@ -215,13 +221,14 @@ function OpenTextInput({ onSubmit }: { onSubmit: (text: string) => void }) {
         }}
       />
       <button type="submit" style={{ ...btnPrimary, opacity: text.trim() ? 1 : 0.6 }} disabled={!text.trim()}>
-        Invia
+        {t("player.submit")}
       </button>
     </form>
   );
 }
 
 export function PlayResults({ snapshot }: { snapshot: GameSnapshot }) {
+  const { t } = useTranslation("game");
   const mine = personalResult(snapshot, snapshot.myPlayerId);
   const row = myLeaderboardRow(snapshot, snapshot.myPlayerId);
   const correct = mine?.correct === true;
@@ -250,21 +257,21 @@ export function PlayResults({ snapshot }: { snapshot: GameSnapshot }) {
           <>
             <div style={{ fontSize: 44, marginBottom: 8 }}>{correct ? "🎉" : "😕"}</div>
             <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0, color: correct ? "#2f7d54" : "#c0556a" }}>
-              {correct ? `Giusto! +${points} punti` : "Sbagliato"}
+              {correct ? t("player.correctPlus", { points }) : t("player.wrong")}
             </h1>
           </>
         ) : (
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: tokens.ink2 }}>Risultati</h1>
+          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: tokens.ink2 }}>{t("player.results")}</h1>
         )}
         {row && (
           <p style={{ color: tokens.ink2, margin: "14px 0 0", fontSize: 16, fontWeight: 600 }}>
-            Sei {row.rank}° con {row.score} punti
+            {t("player.rankLine", { rank: row.rank, score: row.score })}
           </p>
         )}
       </div>
 
       <div style={{ ...glass, padding: "18px 20px" }}>
-        <h3 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 10px" }}>Classifica</h3>
+        <h3 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 10px" }}>{t("player.leaderboard")}</h3>
         <Leaderboard rows={snapshot.leaderboard} highlightId={snapshot.myPlayerId} limit={5} />
       </div>
     </div>
@@ -272,24 +279,25 @@ export function PlayResults({ snapshot }: { snapshot: GameSnapshot }) {
 }
 
 export function PlayPodium({ snapshot }: { snapshot: GameSnapshot }) {
+  const { t } = useTranslation("game");
   const aborted = snapshot.state === "aborted";
   const row = myLeaderboardRow(snapshot, snapshot.myPlayerId);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ ...glass, padding: "28px 22px", textAlign: "center" }}>
         <h1 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 6px" }}>
-          {aborted ? "Partita interrotta" : "🏆 Risultato finale"}
+          {aborted ? t("player.aborted") : t("player.finalResult")}
         </h1>
         {row && (
           <p style={{ color: tokens.brandInk, fontWeight: 700, fontSize: 17, margin: "0 0 18px" }}>
-            Sei arrivato {row.rank}° con {row.score} punti
+            {t("player.finalRankLine", { rank: row.rank, score: row.score })}
           </p>
         )}
         {snapshot.podium.length > 0 && <Podium podium={snapshot.podium} />}
       </div>
 
       <div style={{ ...glass, padding: "18px 20px" }}>
-        <h3 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 10px" }}>Classifica completa</h3>
+        <h3 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 10px" }}>{t("player.fullLeaderboard")}</h3>
         <Leaderboard rows={snapshot.leaderboard} highlightId={snapshot.myPlayerId} />
       </div>
     </div>

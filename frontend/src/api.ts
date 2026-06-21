@@ -14,6 +14,9 @@ export interface User {
   display_name: string | null;
   role: Role;
   status: Status;
+  // Preferred UI language (issue #5). When set, it seeds the initial language
+  // for a logged-in user. Optional: older sessions may not include it.
+  ui_language?: string | null;
 }
 
 export interface AdminUser extends User {

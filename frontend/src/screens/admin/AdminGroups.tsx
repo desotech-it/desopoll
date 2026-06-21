@@ -1,6 +1,7 @@
 // Admin → Groups (/admin/groups) — list/create/delete groups and manage members
 // via the user typeahead (issue #4). Admin-only; mirrors AdminUsers styling.
 import React, { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { admin, ApiError, type Group } from "../../api";
 import {
   btnDanger,
@@ -18,6 +19,7 @@ import {
 import { GroupMembers } from "./GroupMembers";
 
 export function AdminGroups() {
+  const { t } = useTranslation("admin");
   const [groups, setGroups] = useState<Group[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
@@ -35,23 +37,23 @@ export function AdminGroups() {
         setForbidden(true);
         setGroups([]);
       } else {
-        setError(e instanceof Error ? e.message : "Errore nel caricamento dei gruppi.");
+        setError(e instanceof Error ? e.message : t("groups.errorLoad"));
         setGroups([]);
       }
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
   async function removeGroup(g: Group) {
-    if (!window.confirm(`Eliminare il gruppo "${g.name}"?`)) return;
+    if (!window.confirm(t("groups.confirmDelete", { name: g.name }))) return;
     setGroups((prev) => (prev ? prev.filter((x) => x.id !== g.id) : prev));
     try {
       await admin.groups.remove(g.id);
     } catch (e) {
-      window.alert(e instanceof ApiError ? e.message : "Eliminazione non riuscita.");
+      window.alert(e instanceof ApiError ? e.message : t("groups.errorDelete"));
       void load();
     }
   }
@@ -71,9 +73,9 @@ export function AdminGroups() {
     return (
       <div style={{ ...glass, padding: "40px 28px", textAlign: "center" }}>
         <div style={{ fontSize: 36, marginBottom: 10 }}>🔒</div>
-        <h2 style={{ fontSize: 19, fontWeight: 700, margin: "0 0 6px" }}>Accesso negato</h2>
+        <h2 style={{ fontSize: 19, fontWeight: 700, margin: "0 0 6px" }}>{t("forbiddenTitle")}</h2>
         <p style={{ color: tokens.muted, margin: 0, fontSize: 14 }}>
-          Solo gli amministratori possono gestire i gruppi.
+          {t("groups.forbiddenBody")}
         </p>
       </div>
     );
@@ -92,9 +94,9 @@ export function AdminGroups() {
         }}
       >
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, margin: "0 0 4px" }}>Gruppi</h1>
+          <h1 style={{ fontSize: 24, fontWeight: 700, margin: "0 0 4px" }}>{t("groups.title")}</h1>
           <p style={{ color: tokens.muted, margin: 0, fontSize: 14 }}>
-            {groups ? `${groups.length} gruppi` : "Gestione gruppi"}
+            {groups ? t("groups.count", { count: groups.length }) : t("groups.fallback")}
           </p>
         </div>
         {!showForm && (
@@ -103,7 +105,7 @@ export function AdminGroups() {
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
-            Nuovo gruppo
+            {t("groups.newGroup")}
           </button>
         )}
       </div>
@@ -118,11 +120,11 @@ export function AdminGroups() {
 
       {groups === null ? (
         <div style={{ ...glass, padding: 8 }}>
-          <Spinner label="Caricamento dei gruppi…" />
+          <Spinner label={t("groups.loading")} />
         </div>
       ) : groups.length === 0 && !error ? (
         <div style={{ ...glassSoft, borderRadius: 22, padding: "40px 24px", textAlign: "center", color: tokens.muted }}>
-          Nessun gruppo. Crea un gruppo per condividere quiz con più persone insieme.
+          {t("groups.empty")}
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 18 }}>
@@ -142,17 +144,17 @@ export function AdminGroups() {
                   />
                   <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: tokens.ink }}>{g.name}</h3>
                 </div>
-                <Chip tone="violet">{g.member_count} membri</Chip>
+                <Chip tone="violet">{t("groups.members", { count: g.member_count })}</Chip>
               </div>
               <p style={{ fontSize: 13, color: tokens.ink3, margin: 0, minHeight: 18 }}>
-                {g.description || "Nessuna descrizione."}
+                {g.description || t("groups.noDescription")}
               </p>
               <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
                 <button style={btnGhost} onClick={() => setOpen(g)}>
-                  Gestisci membri
+                  {t("groups.manageMembers")}
                 </button>
                 <button style={{ ...btnDanger, marginLeft: "auto" }} onClick={() => removeGroup(g)}>
-                  Elimina
+                  {t("groups.delete")}
                 </button>
               </div>
             </div>
@@ -172,6 +174,7 @@ export function AdminGroups() {
 }
 
 function CreateGroupForm({ onCreated, onCancel }: { onCreated: (g: Group) => void; onCancel: () => void }) {
+  const { t } = useTranslation("admin");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [color, setColor] = useState("#8d83e4");
@@ -190,7 +193,7 @@ function CreateGroupForm({ onCreated, onCancel }: { onCreated: (g: Group) => voi
       });
       onCreated(group);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Creazione non riuscita.");
+      setError(err instanceof Error ? err.message : t("groups.errorCreate"));
     } finally {
       setBusy(false);
     }
@@ -198,11 +201,11 @@ function CreateGroupForm({ onCreated, onCancel }: { onCreated: (g: Group) => voi
 
   return (
     <form onSubmit={submit} style={{ ...glass, padding: "22px 24px", marginBottom: 22 }}>
-      <h3 style={{ margin: "0 0 18px", fontSize: 16, fontWeight: 700 }}>Nuovo gruppo</h3>
+      <h3 style={{ margin: "0 0 18px", fontSize: 16, fontWeight: 700 }}>{t("groups.formTitle")}</h3>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 16 }}>
         <div>
           <label style={labelStyle} htmlFor="ng-name">
-            Nome *
+            {t("groups.nameLabel")}
           </label>
           <input
             id="ng-name"
@@ -210,24 +213,24 @@ function CreateGroupForm({ onCreated, onCancel }: { onCreated: (g: Group) => voi
             value={name}
             onChange={(e) => setName(e.target.value)}
             style={inputStyle}
-            placeholder="Es. Team Marketing"
+            placeholder={t("groups.namePlaceholder")}
           />
         </div>
         <div>
           <label style={labelStyle} htmlFor="ng-desc">
-            Descrizione
+            {t("groups.descriptionLabel")}
           </label>
           <input
             id="ng-desc"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             style={inputStyle}
-            placeholder="Opzionale"
+            placeholder={t("groups.descriptionPlaceholder")}
           />
         </div>
         <div>
           <label style={labelStyle} htmlFor="ng-color">
-            Colore
+            {t("groups.colorLabel")}
           </label>
           <input
             id="ng-color"
@@ -247,10 +250,10 @@ function CreateGroupForm({ onCreated, onCancel }: { onCreated: (g: Group) => voi
 
       <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
         <button type="submit" disabled={busy || !name.trim()} style={{ ...btnPrimary, opacity: busy || !name.trim() ? 0.6 : 1 }}>
-          {busy ? "Creazione…" : "Crea gruppo"}
+          {busy ? t("groups.creating") : t("groups.createGroup")}
         </button>
         <button type="button" style={btnGhost} onClick={onCancel}>
-          Annulla
+          {t("common:actions.cancel")}
         </button>
       </div>
     </form>

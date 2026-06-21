@@ -3,7 +3,9 @@
 // current phase. Tracks whether THIS player has answered the active question.
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useGameSocket } from "../../ws";
+import { LanguageSelector } from "../../i18n/LanguageSelector";
 import { BrandMark, btnGhost, ErrorBox, glass, Spinner, tokens } from "../../ui";
 import { GameStage } from "../../game/components";
 import {
@@ -15,6 +17,7 @@ import type { AnswerPayload } from "../../game/types";
 import { PlayAnswer, PlayLobby, PlayPodium, PlayResults } from "./PlayPhases";
 
 export function PlayGame() {
+  const { t } = useTranslation("game");
   const { sessionId = "" } = useParams();
   const stored = loadJoinedSession();
   const nickname = stored?.nickname ?? "";
@@ -54,9 +57,12 @@ export function PlayGame() {
     return (
       <GameStage>
         <div style={{ ...glass, padding: "32px 24px", textAlign: "center", marginTop: 40 }}>
-          <h2 style={{ fontSize: 19, fontWeight: 700, margin: "0 0 10px" }}>Devi entrare con un PIN</h2>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+            <LanguageSelector />
+          </div>
+          <h2 style={{ fontSize: 19, fontWeight: 700, margin: "0 0 10px" }}>{t("player.needPinTitle")}</h2>
           <Link to="/join" style={btnGhost}>
-            Vai alla pagina di accesso
+            {t("player.goToJoin")}
           </Link>
         </div>
       </GameStage>
@@ -81,6 +87,7 @@ export function PlayGame() {
         }}
       >
         <BrandMark size={16} />
+        <LanguageSelector />
         <span style={{ marginLeft: "auto", fontSize: 13, fontWeight: 700, color: tokens.brandInk }}>
           {nickname}
         </span>
@@ -93,7 +100,7 @@ export function PlayGame() {
             style={btnGhost}
             onClick={() => clearJoinedSession()}
           >
-            Esci
+            {t("player.leave")}
           </Link>
         )}
       </div>
@@ -106,7 +113,7 @@ export function PlayGame() {
 
       {!connected && !snapshot.myPlayerId ? (
         <div style={{ ...glass, padding: 8 }}>
-          <Spinner label="Connessione alla partita…" />
+          <Spinner label={t("player.connecting")} />
         </div>
       ) : s === "lobby" ? (
         <PlayLobby nickname={nickname} />

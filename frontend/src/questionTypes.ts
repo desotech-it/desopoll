@@ -1,5 +1,14 @@
 // Metadata + answer_spec factory/normalizer helpers for the supported question types.
 import type { AnswerSpec, OrderingItem, Option, QuestionType } from "./api";
+import i18n from "./i18n";
+
+// Translate a questionTypes-namespace key via the shared i18n instance. Used by
+// the non-component display helpers (typeName/typeDesc/answerSummary) so they
+// localize without needing the React hook. The QUESTION_TYPES literals below
+// keep the Italian text as a static fallback.
+function tq(key: string, opts?: Record<string, unknown>): string {
+  return i18n.t(key, { ns: "questionTypes", ...opts }) as string;
+}
 
 // A stable icon key per question type. Each type gets its OWN distinct glyph
 // (rendered by TypeIcon in typeIcons.tsx) and a consistent tone — deliberately
@@ -90,8 +99,17 @@ export const QUESTION_TYPES: TypeMeta[] = [
   },
 ];
 
+// Localized human name for a question type (falls back to the type id).
 export function typeName(type: QuestionType): string {
-  return QUESTION_TYPES.find((t) => t.type === type)?.name ?? type;
+  if (QUESTION_TYPES.some((t) => t.type === type)) return tq(`${type}.name`);
+  return type;
+}
+
+// Localized one-line description for a question type (used by the type picker).
+export function typeDesc(type: QuestionType): string {
+  const meta = QUESTION_TYPES.find((t) => t.type === type);
+  if (!meta) return "";
+  return tq(`${type}.desc`);
 }
 
 // Look up the metadata (icon key + tone + name) for a question type.
@@ -197,35 +215,38 @@ export function isOrdering(spec: AnswerSpec): spec is { items: OrderingItem[]; c
   return typeof spec === "object" && spec !== null && "items" in spec;
 }
 
-// Short human description of the configured answer (for the question list).
+// Short, localized human description of the configured answer (for the question list).
 export function answerSummary(type: QuestionType, spec: AnswerSpec): string {
   if (type === "true_false" && isTrueFalse(spec)) {
-    return `Corretta: ${spec.correct ? "Vero" : "Falso"}`;
+    const value = spec.correct ? tq("summary.trueValue") : tq("summary.falseValue");
+    return tq("summary.trueFalse", { value });
   }
   if (type === "open_text" && isOpenText(spec)) {
     const n = spec.accepted.length;
-    return n ? `${n} risposta/e accettata/e` : "Nessuna risposta accettata";
+    return n ? tq("summary.acceptedCount", { count: n }) : tq("summary.acceptedNone");
   }
   if (type === "numeric" && isNumeric(spec)) {
     const tol = spec.tolerance ?? 0;
-    return tol ? `Risposta: ${spec.answer} ± ${tol}` : `Risposta: ${spec.answer}`;
+    return tol
+      ? tq("summary.numericTol", { answer: spec.answer, tol })
+      : tq("summary.numeric", { answer: spec.answer });
   }
   if (type === "slider" && isSlider(spec)) {
     const tol = spec.tolerance ?? 0;
-    const base = `Scala ${spec.min}–${spec.max} · risposta ${spec.answer}`;
-    return tol ? `${base} ± ${tol}` : base;
+    const args = { min: spec.min, max: spec.max, answer: spec.answer, tol };
+    return tol ? tq("summary.sliderTol", args) : tq("summary.slider", args);
   }
   if (type === "ordering" && isOrdering(spec)) {
-    return `${spec.items.length} elementi da ordinare`;
+    return tq("summary.ordering", { count: spec.items.length });
   }
   if (type === "word_cloud") {
-    return "Sondaggio · nessun punteggio";
+    return tq("summary.wordCloud");
   }
   if (hasOptions(spec)) {
     const total = spec.options.length;
-    if (type === "poll") return `${total} opzioni`;
+    if (type === "poll") return tq("summary.pollOptions", { count: total });
     const correct = (spec.correct ?? []).length;
-    return `${total} opzioni · ${correct} corretta/e`;
+    return tq("summary.optionsCorrect", { total, correct });
   }
   return "";
 }

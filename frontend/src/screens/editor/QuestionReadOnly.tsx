@@ -1,12 +1,20 @@
 // Read-only rendering of a question, shown in the editor when the caller has
 // only view/play access (cannot edit). Mirrors QuestionEditor's header.
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { type Question } from "../../api";
 import { answerSummary, typeName } from "../../questionTypes";
 import { glass, inputStyle, labelStyle, tokens } from "../../ui";
 import { TypeChip } from "../../typeIcons";
 
 export function QuestionReadOnly({ index, question }: { index: number; question: Question }) {
+  const { t } = useTranslation("editor");
+  const pointsLabel =
+    question.points_mode === "double"
+      ? t("question.pointsDouble")
+      : question.points_mode === "none"
+        ? t("question.pointsNone")
+        : t("question.pointsStandard");
   return (
     <div style={{ ...glass, padding: "18px 20px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
@@ -31,7 +39,7 @@ export function QuestionReadOnly({ index, question }: { index: number; question:
         <span style={{ fontSize: 12, color: tokens.ink3 }}>{answerSummary(question.type, question.answer_spec)}</span>
       </div>
 
-      <label style={labelStyle}>Testo della domanda</label>
+      <label style={labelStyle}>{t("question.promptLabel")}</label>
       <div
         style={{
           ...inputStyle,
@@ -41,7 +49,7 @@ export function QuestionReadOnly({ index, question }: { index: number; question:
           cursor: "default",
         }}
       >
-        {question.prompt || <span style={{ color: tokens.hint }}>(nessun testo)</span>}
+        {question.prompt || <span style={{ color: tokens.hint }}>{t("readOnly.noText")}</span>}
       </div>
 
       {question.image && (
@@ -53,16 +61,15 @@ export function QuestionReadOnly({ index, question }: { index: number; question:
       )}
 
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 14, fontSize: 12.5, color: tokens.ink3 }}>
-        <span>Tempo limite: {question.time_limit_sec}s</span>
-        <span>
-          Punteggio:{" "}
-          {question.points_mode === "double"
-            ? "Doppio"
-            : question.points_mode === "none"
-              ? "Nessuno"
-              : "Standard"}
-        </span>
-        {question.points_mode !== "none" && <span>Bonus velocità: {question.speed_bonus ? "Attivo" : "No"}</span>}
+        <span>{t("readOnly.timeLimit", { sec: question.time_limit_sec })}</span>
+        <span>{t("readOnly.points", { value: pointsLabel })}</span>
+        {question.points_mode !== "none" && (
+          <span>
+            {t("readOnly.speedBonus", {
+              value: question.speed_bonus ? t("readOnly.yes") : t("readOnly.no"),
+            })}
+          </span>
+        )}
       </div>
     </div>
   );

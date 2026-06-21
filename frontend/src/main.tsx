@@ -1,5 +1,6 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
+import "./i18n"; // initialize i18next before rendering
 import { App } from "./App";
 
 createRoot(document.getElementById("root")!).render(

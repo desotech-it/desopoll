@@ -4,7 +4,9 @@
 // actual WS join happens on the player game screen.
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { ApiError, sessions } from "../api";
+import { LanguageSelector } from "../i18n/LanguageSelector";
 import {
   BrandMark,
   btnGhost,
@@ -24,6 +26,7 @@ export function isValidPin(pin: string): boolean {
 }
 
 export function Join() {
+  const { t } = useTranslation("auth");
   const navigate = useNavigate();
   const [step, setStep] = useState<"pin" | "nickname">("pin");
   const [pin, setPin] = useState("");
@@ -36,23 +39,23 @@ export function Join() {
     e.preventDefault();
     setError(null);
     if (!isValidPin(pin)) {
-      setError("Inserisci un PIN di 6 cifre.");
+      setError(t("join.errorInvalidPin"));
       return;
     }
     setBusy(true);
     try {
       const info = await sessions.byPin(pin.trim());
       if (!info.joinable) {
-        setError("Questa partita non è più aperta alle iscrizioni.");
+        setError(t("join.errorNotJoinable"));
         return;
       }
       setSessionId(info.sessionId);
       setStep("nickname");
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
-        setError("Nessuna partita trovata con questo PIN.");
+        setError(t("join.errorNotFound"));
       } else {
-        setError(err instanceof Error ? err.message : "Errore di connessione.");
+        setError(err instanceof Error ? err.message : t("join.errorConnection"));
       }
     } finally {
       setBusy(false);
@@ -64,7 +67,7 @@ export function Join() {
     setError(null);
     const nn = nickname.trim();
     if (!nn) {
-      setError("Scegli un nickname.");
+      setError(t("join.errorNickname"));
       return;
     }
     if (!sessionId) return;
@@ -76,11 +79,14 @@ export function Join() {
   return (
     <div style={{ ...pageStyle, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
       <div style={{ ...glass, padding: "36px 32px", maxWidth: 420, width: "100%" }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
+          <LanguageSelector />
+        </div>
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
           <BrandMark size={26} />
         </div>
         <p style={{ color: tokens.muted, margin: "0 0 26px", textAlign: "center", fontSize: 14 }}>
-          Partecipa a una partita dal vivo
+          {t("join.subtitle")}
         </p>
 
         {error && (
@@ -92,7 +98,7 @@ export function Join() {
         {step === "pin" ? (
           <form onSubmit={submitPin}>
             <label style={labelStyle} htmlFor="join-pin">
-              PIN di gioco
+              {t("join.pinLabel")}
             </label>
             <input
               id="join-pin"
@@ -102,8 +108,8 @@ export function Join() {
               value={pin}
               onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
               style={{ ...inputStyle, fontSize: 28, fontWeight: 800, letterSpacing: 10, textAlign: "center" }}
-              placeholder="123456"
-              aria-label="PIN di gioco"
+              placeholder={t("join.pinPlaceholder")}
+              aria-label={t("join.pinLabel")}
             />
             <button
               type="submit"
@@ -117,13 +123,13 @@ export function Join() {
                 opacity: busy || !isValidPin(pin) ? 0.6 : 1,
               }}
             >
-              {busy ? "Verifica…" : "Entra"}
+              {busy ? t("join.verifying") : t("join.enter")}
             </button>
           </form>
         ) : (
           <form onSubmit={submitNickname}>
             <label style={labelStyle} htmlFor="join-nick">
-              Il tuo nickname
+              {t("join.nicknameLabel")}
             </label>
             <input
               id="join-nick"
@@ -132,8 +138,8 @@ export function Join() {
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
               style={{ ...inputStyle, fontSize: 16 }}
-              placeholder="Es. Giulia"
-              aria-label="Nickname"
+              placeholder={t("join.nicknamePlaceholder")}
+              aria-label={t("join.nicknameAria")}
             />
             <button
               type="submit"
@@ -147,7 +153,7 @@ export function Join() {
                 opacity: !nickname.trim() ? 0.6 : 1,
               }}
             >
-              Partecipa
+              {t("join.join")}
             </button>
             <button
               type="button"
@@ -157,14 +163,14 @@ export function Join() {
                 setError(null);
               }}
             >
-              ← Cambia PIN
+              {t("join.changePin")}
             </button>
           </form>
         )}
 
         <p style={{ fontSize: 12, color: tokens.hint, marginTop: 22, textAlign: "center" }}>
           <Link to="/" style={{ color: tokens.brandInk, textDecoration: "none", fontWeight: 600 }}>
-            Sei un organizzatore? Accedi
+            {t("join.organizerLogin")}
           </Link>
         </p>
       </div>

@@ -1,5 +1,6 @@
 // Per-question header toolbar: move up / move down (reorder) + delete.
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { btnDanger } from "../../ui";
 
 const iconBtn: React.CSSProperties = {
@@ -31,6 +32,7 @@ export function QuestionToolbar({
   onMoveDown: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useTranslation("editor");
   const upDisabled = !canMoveUp || reordering;
   const downDisabled = !canMoveDown || reordering;
   return (
@@ -39,8 +41,8 @@ export function QuestionToolbar({
         type="button"
         onClick={onMoveUp}
         disabled={upDisabled}
-        title="Sposta su"
-        aria-label="Sposta domanda su"
+        title={t("question.moveUp")}
+        aria-label={t("question.moveUpAria")}
         style={{ ...iconBtn, opacity: upDisabled ? 0.4 : 1, cursor: upDisabled ? "default" : "pointer" }}
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
@@ -51,15 +53,15 @@ export function QuestionToolbar({
         type="button"
         onClick={onMoveDown}
         disabled={downDisabled}
-        title="Sposta giù"
-        aria-label="Sposta domanda giù"
+        title={t("question.moveDown")}
+        aria-label={t("question.moveDownAria")}
         style={{ ...iconBtn, opacity: downDisabled ? 0.4 : 1, cursor: downDisabled ? "default" : "pointer" }}
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="6 9 12 15 18 9" />
         </svg>
       </button>
-      <button style={btnDanger} onClick={onDelete} title="Elimina domanda" disabled={reordering}>
+      <button style={btnDanger} onClick={onDelete} title={t("question.deleteHint")} disabled={reordering}>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
           <polyline points="3 6 5 6 21 6" />
           <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2" />

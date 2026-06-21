@@ -1,5 +1,6 @@
 // Quiz title/description/public meta editor + reusable Toggle.
 import React, { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { type Quiz } from "../../api";
 import { Chip, glass, inputStyle, labelStyle, tokens } from "../../ui";
 
@@ -11,6 +12,7 @@ export function QuizMetaEditor({
   quiz: Quiz;
   onPatch: (body: { title?: string; description?: string; is_public?: boolean }) => Promise<void> | void;
 }) {
+  const { t } = useTranslation("editor");
   const [title, setTitle] = useState(quiz.title);
   const [description, setDescription] = useState(quiz.description ?? "");
   // Track save lifecycle for the public toggle so the state is obviously saved.
@@ -43,7 +45,7 @@ export function QuizMetaEditor({
   return (
     <div style={{ ...glass, padding: "22px 24px" }}>
       <label style={labelStyle} htmlFor="quiz-title">
-        Titolo del quiz
+        {t("meta.titleLabel")}
       </label>
       <input
         id="quiz-title"
@@ -54,7 +56,7 @@ export function QuizMetaEditor({
       />
 
       <label style={labelStyle} htmlFor="quiz-desc">
-        Descrizione
+        {t("meta.descriptionLabel")}
       </label>
       <textarea
         id="quiz-desc"
@@ -62,7 +64,7 @@ export function QuizMetaEditor({
         onChange={(e) => setDescription(e.target.value)}
         onBlur={() => description !== (quiz.description ?? "") && patchQuiet({ description })}
         rows={2}
-        placeholder="Una breve descrizione del quiz…"
+        placeholder={t("meta.descriptionPlaceholder")}
         style={{ ...inputStyle, resize: "vertical", marginBottom: 16 }}
       />
 
@@ -81,17 +83,15 @@ export function QuizMetaEditor({
         <Toggle
           checked={quiz.is_public}
           onChange={togglePublic}
-          label="Quiz pubblico"
+          label={t("meta.publicToggle")}
         />
-        {quiz.is_public ? <Chip tone="green">Pubblicato</Chip> : <Chip tone="violet">Privato</Chip>}
+        {quiz.is_public ? <Chip tone="green">{t("meta.published")}</Chip> : <Chip tone="violet">{t("meta.private")}</Chip>}
         <span style={{ fontSize: 12.5, color: tokens.ink3, flex: 1, minWidth: 180 }}>
-          {quiz.is_public
-            ? "Visibile e riutilizzabile da altri utenti."
-            : "Visibile solo a te."}
+          {quiz.is_public ? t("meta.publicHint") : t("meta.privateHint")}
         </span>
         <span aria-live="polite" style={{ fontSize: 12, minWidth: 70, textAlign: "right" }}>
-          {pubState === "saving" && <span style={{ color: tokens.hint }}>Salvataggio…</span>}
-          {pubState === "saved" && <span style={{ color: "#2f7d54" }}>✓ Salvato</span>}
+          {pubState === "saving" && <span style={{ color: tokens.hint }}>{t("common:actions.saving")}</span>}
+          {pubState === "saved" && <span style={{ color: "#2f7d54" }}>{t("common:actions.saved")}</span>}
         </span>
       </div>
     </div>
@@ -100,16 +100,17 @@ export function QuizMetaEditor({
 
 // Read-only quiz meta header, shown when the caller cannot edit the quiz.
 export function QuizMetaReadOnly({ quiz }: { quiz: Quiz }) {
+  const { t } = useTranslation("editor");
   return (
     <div style={{ ...glass, padding: "22px 24px" }}>
       <h1 style={{ margin: "0 0 8px", fontSize: 22, fontWeight: 700, color: tokens.ink }}>
         {quiz.title}
       </h1>
       <p style={{ margin: 0, fontSize: 14, color: tokens.ink3, lineHeight: 1.5 }}>
-        {quiz.description || "Nessuna descrizione."}
+        {quiz.description || t("meta.noDescription")}
       </p>
       <div style={{ marginTop: 12 }}>
-        {quiz.is_public ? <Chip tone="green">Pubblico</Chip> : <Chip tone="violet">Privato</Chip>}
+        {quiz.is_public ? <Chip tone="green">{t("meta.publicChip")}</Chip> : <Chip tone="violet">{t("meta.private")}</Chip>}
       </div>
     </div>
   );

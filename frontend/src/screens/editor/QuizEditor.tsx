@@ -1,6 +1,7 @@
 // Quiz editor (/quiz/:id) — edit quiz meta + manage questions of all supported types.
 import React, { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   ApiError,
   questions as questionsApi,
@@ -35,6 +36,7 @@ import { QuestionReadOnly } from "./QuestionReadOnly";
 import { ShareDialog } from "../share/ShareDialog";
 
 export function QuizEditor() {
+  const { t } = useTranslation("editor");
   const { id = "" } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -63,11 +65,11 @@ export function QuizEditor() {
       setPermission(data.permission);
       setItems([...data.questions].sort((a, b) => a.position - b.position));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Errore nel caricamento del quiz.");
+      setError(e instanceof Error ? e.message : t("errorLoad"));
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, t]);
 
   useEffect(() => {
     void load();
@@ -79,11 +81,11 @@ export function QuizEditor() {
         const { quiz: updated } = await quizzes.update(id, body);
         setQuiz(updated);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Salvataggio del quiz non riuscito.");
+        setError(e instanceof Error ? e.message : t("errorPatch"));
         throw e; // let callers (e.g. the public toggle) reflect the failed save
       }
     },
-    [id],
+    [id, t],
   );
 
   async function addQuestion(type: QuestionType) {
@@ -101,7 +103,7 @@ export function QuizEditor() {
       setItems((prev) => [...prev, question].sort((a, b) => a.position - b.position));
       setShowTypePicker(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Aggiunta della domanda non riuscita.");
+      setError(e instanceof Error ? e.message : t("errorAddQuestion"));
     } finally {
       setAdding(false);
     }
@@ -115,7 +117,7 @@ export function QuizEditor() {
       navigate(`/host/${sessionId}`);
     } catch (e) {
       // 400 {error:"quiz has no questions"} is surfaced here.
-      setError(e instanceof Error ? e.message : "Avvio della partita non riuscito.");
+      setError(e instanceof Error ? e.message : t("errorLaunch"));
     } finally {
       setLaunching(false);
     }
@@ -145,26 +147,26 @@ export function QuizEditor() {
       setItems([...ordered].sort((a, b) => a.position - b.position));
     } catch (e) {
       setItems(prev); // revert on failure
-      setError(e instanceof Error ? e.message : "Riordino delle domande non riuscito.");
+      setError(e instanceof Error ? e.message : t("errorReorder"));
     } finally {
       setReordering(false);
     }
   }
 
   async function deleteQuestion(q: Question) {
-    if (!window.confirm("Eliminare questa domanda?")) return;
+    if (!window.confirm(t("confirmDeleteQuestion"))) return;
     try {
       await questionsApi.remove(q.id);
       setItems((prev) => prev.filter((x) => x.id !== q.id));
     } catch (e) {
-      window.alert(e instanceof ApiError ? e.message : "Eliminazione non riuscita.");
+      window.alert(e instanceof ApiError ? e.message : t("errorDeleteQuestion"));
     }
   }
 
   if (loading) {
     return (
       <div style={{ ...glass, padding: 8 }}>
-        <Spinner label="Caricamento dell'editor…" />
+        <Spinner label={t("loading")} />
       </div>
     );
   }
@@ -172,10 +174,10 @@ export function QuizEditor() {
   if (!quiz) {
     return (
       <div>
-        <ErrorBox message={error ?? "Quiz non trovato."} onRetry={load} />
+        <ErrorBox message={error ?? t("quizNotFound")} onRetry={load} />
         <div style={{ marginTop: 16 }}>
           <Link to="/" style={btnGhost}>
-            ← Torna alla dashboard
+            {t("common:actions.backToDashboard")}
           </Link>
         </div>
       </div>
@@ -195,11 +197,11 @@ export function QuizEditor() {
         }}
       >
         <Link to="/" style={btnGhost}>
-          ← Tutti i quiz
+          {t("allQuizzes")}
         </Link>
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           {manageable && (
-            <button style={btnGhost} onClick={() => setSharing(true)} title="Condividi questo quiz">
+            <button style={btnGhost} onClick={() => setSharing(true)} title={t("shareHint")}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="18" cy="5" r="3" />
                 <circle cx="6" cy="12" r="3" />
@@ -207,7 +209,7 @@ export function QuizEditor() {
                 <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
                 <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
               </svg>
-              Condividi
+              {t("share")}
             </button>
           )}
           {playable && (
@@ -215,12 +217,12 @@ export function QuizEditor() {
               style={{ ...btnPrimary, opacity: launching || items.length === 0 ? 0.6 : 1 }}
               disabled={launching || items.length === 0}
               onClick={launchGame}
-              title={items.length === 0 ? "Aggiungi almeno una domanda" : "Avvia una partita dal vivo"}
+              title={items.length === 0 ? t("launchEmptyHint") : t("launchHint")}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                 <polygon points="6 4 20 12 6 20 6 4" fill="currentColor" />
               </svg>
-              {launching ? "Avvio…" : "Avvia partita"}
+              {launching ? t("launching") : t("launch")}
             </button>
           )}
         </div>
@@ -241,8 +243,8 @@ export function QuizEditor() {
             color: tokens.ink2,
           }}
         >
-          <Chip tone="sky">Sola lettura</Chip>
-          <span>Hai accesso in sola lettura a questo quiz. Non puoi modificarlo.</span>
+          <Chip tone="sky">{t("readOnlyChip")}</Chip>
+          <span>{t("readOnlyNote")}</span>
         </div>
       )}
 
@@ -269,7 +271,7 @@ export function QuizEditor() {
         }}
       >
         <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>
-          Domande{" "}
+          {t("questionsHeading")}{" "}
           <span style={{ fontSize: 13, fontWeight: 400, color: tokens.ink3, marginLeft: 4 }}>
             {items.length}
           </span>
@@ -280,7 +282,7 @@ export function QuizEditor() {
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
-            Aggiungi domanda
+            {t("addQuestion")}
           </button>
         )}
       </div>
@@ -296,11 +298,11 @@ export function QuizEditor() {
       {items.length === 0 && !showTypePicker ? (
         <div style={{ ...glassSoft, borderRadius: 22, padding: "40px 24px", textAlign: "center" }}>
           <p style={{ color: tokens.muted, margin: editable ? "0 0 18px" : 0, fontSize: 14 }}>
-            Questo quiz non ha ancora domande.
+            {t("noQuestions")}
           </p>
           {editable && (
             <button style={btnPrimary} onClick={() => setShowTypePicker(true)}>
-              Aggiungi la prima domanda
+              {t("addFirstQuestion")}
             </button>
           )}
         </div>

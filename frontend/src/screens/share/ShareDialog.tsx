@@ -2,6 +2,7 @@
 // owner/manager find users (typeahead) or pick a group, choose a permission
 // level, and add/remove shares. Only mounted when the caller can manage.
 import React, { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ApiError,
   admin,
@@ -11,7 +12,7 @@ import {
   type SubjectType,
   type UserSearchResult,
 } from "../../api";
-import { type Permission, PERMISSION_DESCRIPTIONS, PERMISSION_TONES, permissionLabel } from "../../permissions";
+import { type Permission, permissionDescription, PERMISSION_TONES, permissionLabel } from "../../permissions";
 import { btnDanger, btnGhost, btnPrimary, Chip, ErrorBox, glass, Spinner, tokens } from "../../ui";
 import { UserSearch } from "./UserSearch";
 import { PermissionSelect } from "./PermissionSelect";
@@ -27,6 +28,7 @@ export function ShareDialog({
   isAdmin: boolean;
   onClose: () => void;
 }) {
+  const { t } = useTranslation("share");
   const [list, setList] = useState<Share[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<SubjectType>("user");
@@ -42,10 +44,10 @@ export function ShareDialog({
       const { shares } = await sharesApi.list(quizId);
       setList(shares);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Errore nel caricamento delle condivisioni.");
+      setError(e instanceof Error ? e.message : t("errorLoad"));
       setList([]);
     }
-  }, [quizId]);
+  }, [quizId, t]);
 
   useEffect(() => {
     void load();
@@ -92,9 +94,9 @@ export function ShareDialog({
       setSelectedGroup("");
     } catch (e) {
       if (e instanceof ApiError && e.status === 400) {
-        setError("Non puoi condividere il quiz con il suo proprietario.");
+        setError(t("errorOwner"));
       } else {
-        setError(e instanceof Error ? e.message : "Condivisione non riuscita.");
+        setError(e instanceof Error ? e.message : t("errorShare"));
       }
     } finally {
       setBusy(false);
@@ -106,7 +108,7 @@ export function ShareDialog({
     try {
       await sharesApi.remove(quizId, s.id);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Rimozione non riuscita.");
+      setError(e instanceof Error ? e.message : t("errorRemove"));
       void load();
     }
   }
@@ -115,7 +117,7 @@ export function ShareDialog({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={`Condividi ${quizTitle}`}
+      aria-label={t("ariaLabel", { title: quizTitle })}
       onClick={onClose}
       style={{
         position: "fixed",
@@ -136,10 +138,10 @@ export function ShareDialog({
       >
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
           <div>
-            <h2 style={{ margin: "0 0 2px", fontSize: 20, fontWeight: 700 }}>Condividi quiz</h2>
+            <h2 style={{ margin: "0 0 2px", fontSize: 20, fontWeight: 700 }}>{t("title")}</h2>
             <p style={{ margin: 0, fontSize: 13, color: tokens.ink3 }}>{quizTitle}</p>
           </div>
-          <button style={btnGhost} onClick={onClose} aria-label="Chiudi">
+          <button style={btnGhost} onClick={onClose} aria-label={t("common:actions.close")}>
             ✕
           </button>
         </div>
@@ -147,11 +149,11 @@ export function ShareDialog({
         {/* Subject tabs */}
         <div style={{ display: "flex", gap: 8, margin: "18px 0 12px" }}>
           <TabBtn active={tab === "user"} onClick={() => setTab("user")}>
-            Utenti
+            {t("tabUsers")}
           </TabBtn>
           {isAdmin && (
             <TabBtn active={tab === "group"} onClick={() => setTab("group")}>
-              Gruppi
+              {t("tabGroups")}
             </TabBtn>
           )}
         </div>
@@ -164,31 +166,31 @@ export function ShareDialog({
                 <span style={{ fontSize: 14, fontWeight: 600, color: tokens.ink, flex: 1, minWidth: 140 }}>
                   {pendingUser.display_name || pendingUser.email}
                 </span>
-                <PermissionSelect value={permission} onChange={setPermission} ariaLabel="Permesso per il nuovo utente" />
+                <PermissionSelect value={permission} onChange={setPermission} ariaLabel={t("permissionUserAria")} />
                 <button
                   style={{ ...btnPrimary, opacity: busy ? 0.6 : 1 }}
                   disabled={busy}
                   onClick={() => addShare("user", pendingUser.id)}
                 >
-                  Condividi
+                  {t("shareBtn")}
                 </button>
                 <button style={btnGhost} onClick={() => setPendingUser(null)}>
-                  Annulla
+                  {t("common:actions.cancel")}
                 </button>
               </div>
             ) : (
-              <UserSearch onPick={setPendingUser} autoFocus label="Aggiungi una persona" />
+              <UserSearch onPick={setPendingUser} autoFocus label={t("addPerson")} />
             )
           ) : (
             <div style={{ display: "flex", alignItems: "flex-end", gap: 10, flexWrap: "wrap" }}>
               <div style={{ flex: 1, minWidth: 160 }}>
                 <label style={{ fontSize: 12.5, fontWeight: 600, color: tokens.ink2, display: "block", marginBottom: 6 }}>
-                  Aggiungi un gruppo
+                  {t("addGroup")}
                 </label>
                 <select
                   value={selectedGroup}
                   onChange={(e) => setSelectedGroup(e.target.value)}
-                  aria-label="Gruppo"
+                  aria-label={t("groupAria")}
                   style={{
                     width: "100%",
                     fontFamily: "inherit",
@@ -201,7 +203,7 @@ export function ShareDialog({
                     cursor: "pointer",
                   }}
                 >
-                  <option value="">{groups === null ? "Caricamento…" : "Seleziona un gruppo"}</option>
+                  <option value="">{groups === null ? t("loading") : t("selectGroup")}</option>
                   {(groups ?? []).map((g) => (
                     <option key={g.id} value={g.id}>
                       {g.name} ({g.member_count})
@@ -209,18 +211,18 @@ export function ShareDialog({
                   ))}
                 </select>
               </div>
-              <PermissionSelect value={permission} onChange={setPermission} ariaLabel="Permesso per il nuovo gruppo" />
+              <PermissionSelect value={permission} onChange={setPermission} ariaLabel={t("permissionGroupAria")} />
               <button
                 style={{ ...btnPrimary, opacity: busy || !selectedGroup ? 0.6 : 1 }}
                 disabled={busy || !selectedGroup}
                 onClick={() => selectedGroup && addShare("group", selectedGroup)}
               >
-                Condividi
+                {t("shareBtn")}
               </button>
             </div>
           )}
           <p style={{ margin: 0, fontSize: 12, color: tokens.hint }}>
-            {PERMISSION_DESCRIPTIONS[permission]}
+            {permissionDescription(permission)}
           </p>
         </div>
 
@@ -232,13 +234,13 @@ export function ShareDialog({
 
         {/* Current shares */}
         <h3 style={{ fontSize: 14, fontWeight: 700, margin: "22px 0 10px", color: tokens.ink2 }}>
-          Condivisioni attive
+          {t("activeShares")}
         </h3>
         {list === null ? (
-          <Spinner label="Caricamento…" />
+          <Spinner label={t("loading")} />
         ) : list.length === 0 ? (
           <p style={{ fontSize: 13, color: tokens.hint, margin: 0 }}>
-            Questo quiz non è ancora condiviso con nessuno.
+            {t("noShares")}
           </p>
         ) : (
           <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 8 }}>
@@ -253,6 +255,7 @@ export function ShareDialog({
 }
 
 function ShareRow({ share, onRemove }: { share: Share; onRemove: () => void }) {
+  const { t } = useTranslation("share");
   const name = share.subject_display_name || share.subject_label;
   return (
     <li
@@ -276,8 +279,8 @@ function ShareRow({ share, onRemove }: { share: Share; onRemove: () => void }) {
         )}
       </div>
       <Chip tone={PERMISSION_TONES[share.permission]}>{permissionLabel(share.permission)}</Chip>
-      <button style={{ ...btnDanger, padding: "5px 10px" }} onClick={onRemove} aria-label={`Rimuovi ${name}`}>
-        Rimuovi
+      <button style={{ ...btnDanger, padding: "5px 10px" }} onClick={onRemove} aria-label={t("removeAria", { name })}>
+        {t("common:actions.remove")}
       </button>
     </li>
   );

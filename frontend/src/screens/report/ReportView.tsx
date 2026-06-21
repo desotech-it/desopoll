@@ -1,6 +1,7 @@
 // Presentational post-game report (issue #3). Pure: props in, glass JSX out.
 // Renders per-question stats (correct %, distribution bars) + final standings.
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { glass, glassSoft, tokens } from "../../ui";
 import { TypeChip } from "../../typeIcons";
 import { typeName } from "../../questionTypes";
@@ -17,15 +18,16 @@ import {
 } from "./reportFormat";
 
 export function ReportView({ report }: { report: SessionReport }) {
+  const { t } = useTranslation("report");
   const top = winner(report.standings);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
       <SummaryCard report={report} winnerName={top?.nickname ?? null} />
       <section style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Domande</h2>
+        <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>{t("questions")}</h2>
         {report.questions.length === 0 ? (
           <div style={{ ...glassSoft, padding: "18px 20px", color: tokens.muted }}>
-            Nessuna domanda registrata per questa partita.
+            {t("noQuestions")}
           </div>
         ) : (
           report.questions.map((q, i) => <QuestionCard key={q.questionId} stat={q} index={i} playerCount={report.session.playerCount} />)
@@ -37,23 +39,24 @@ export function ReportView({ report }: { report: SessionReport }) {
 }
 
 function SummaryCard({ report, winnerName }: { report: SessionReport; winnerName: string | null }) {
+  const { t } = useTranslation("report");
   const stats: { label: string; value: string }[] = [
-    { label: "Partecipanti", value: String(report.session.playerCount) },
-    { label: "Domande", value: String(report.questions.length) },
-    { label: "Media corrette", value: `${averageCorrectPct(report.questions)}%` },
-    { label: "Risposte totali", value: String(totalAnswers(report.questions)) },
-    { label: "Durata", value: gameDuration(report) },
+    { label: t("stats.participants"), value: String(report.session.playerCount) },
+    { label: t("stats.questions"), value: String(report.questions.length) },
+    { label: t("stats.avgCorrect"), value: `${averageCorrectPct(report.questions)}%` },
+    { label: t("stats.totalAnswers"), value: String(totalAnswers(report.questions)) },
+    { label: t("stats.duration"), value: gameDuration(report) },
   ];
   return (
     <div style={{ ...glass, padding: "24px 24px" }}>
-      <h1 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 4px" }}>Risultati della partita</h1>
+      <h1 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 4px" }}>{t("title")}</h1>
       {winnerName ? (
         <p style={{ margin: "0 0 18px", color: tokens.brandInk, fontWeight: 700, fontSize: 15 }}>
-          🏆 Vincitore: {winnerName}
+          {t("winner", { name: winnerName })}
         </p>
       ) : (
         <p style={{ margin: "0 0 18px", color: tokens.muted, fontSize: 14 }}>
-          Nessun partecipante ha totalizzato punti.
+          {t("noWinner")}
         </p>
       )}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
@@ -77,6 +80,7 @@ function QuestionCard({
   index: number;
   playerCount: number;
 }) {
+  const { t } = useTranslation("report");
   const scored = isScored(stat.type);
   const buckets = sortedDistribution(stat);
   const max = Math.max(1, ...buckets.map((b) => b.count));
@@ -117,7 +121,7 @@ function QuestionCard({
       )}
 
       {buckets.length === 0 ? (
-        <p style={{ color: tokens.muted, fontSize: 13, margin: 0 }}>Nessuna risposta.</p>
+        <p style={{ color: tokens.muted, fontSize: 13, margin: 0 }}>{t("noAnswer")}</p>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {buckets.map((b) => {
@@ -165,10 +169,11 @@ function QuestionCard({
 }
 
 function CorrectMeter({ value }: { value: number }) {
+  const { t } = useTranslation("report");
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, fontWeight: 600, marginBottom: 4 }}>
-        <span style={{ color: tokens.ink3 }}>Risposte corrette</span>
+        <span style={{ color: tokens.ink3 }}>{t("correctAnswers")}</span>
         <span style={{ color: value >= 50 ? "#2f7d54" : "#c0556a" }}>{value}%</span>
       </div>
       <div
@@ -194,18 +199,19 @@ function CorrectMeter({ value }: { value: number }) {
 }
 
 function StandingsCard({ report }: { report: SessionReport }) {
+  const { t } = useTranslation("report");
   if (report.standings.length === 0) {
     return (
       <div style={{ ...glass, padding: "18px 20px" }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 8px" }}>Classifica finale</h2>
-        <p style={{ color: tokens.muted, fontSize: 14, margin: 0 }}>Nessun punteggio registrato.</p>
+        <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 8px" }}>{t("finalStandings")}</h2>
+        <p style={{ color: tokens.muted, fontSize: 14, margin: 0 }}>{t("noScores")}</p>
       </div>
     );
   }
   const medals: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
   return (
     <div style={{ ...glass, padding: "18px 20px" }}>
-      <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 12px" }}>Classifica finale</h2>
+      <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 12px" }}>{t("finalStandings")}</h2>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {report.standings.map((s) => (
           <div

@@ -1,6 +1,7 @@
 // Per-question image picker: file input -> client resize -> data URL, with a
 // preview thumbnail and a Remove button. The parent persists the value.
 import React, { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { btnGhost, glassSoft, labelStyle, tokens } from "../../ui";
 import { fileToResizedDataUrl } from "../../imageResize";
 
@@ -12,6 +13,7 @@ export function ImagePicker({
   // null clears the image; a data URL sets it.
   onChange: (next: string | null) => void;
 }) {
+  const { t } = useTranslation("editor");
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -27,7 +29,7 @@ export function ImagePicker({
       const dataUrl = await fileToResizedDataUrl(file);
       onChange(dataUrl);
     } catch (ex) {
-      setErr(ex instanceof Error ? ex.message : "Caricamento dell'immagine non riuscito.");
+      setErr(ex instanceof Error ? ex.message : t("image.errorUpload"));
     } finally {
       setBusy(false);
     }
@@ -35,14 +37,14 @@ export function ImagePicker({
 
   return (
     <div style={{ marginBottom: 16 }}>
-      <label style={labelStyle}>Immagine (opzionale)</label>
+      <label style={labelStyle}>{t("image.label")}</label>
       <input
         ref={inputRef}
         type="file"
         accept="image/*"
         onChange={onFile}
         style={{ display: "none" }}
-        aria-label="Carica immagine"
+        aria-label={t("image.upload")}
       />
       {image ? (
         <div
@@ -56,7 +58,7 @@ export function ImagePicker({
         >
           <img
             src={image}
-            alt="Anteprima immagine domanda"
+            alt={t("image.previewAlt")}
             style={{
               width: 84,
               height: 64,
@@ -73,7 +75,7 @@ export function ImagePicker({
               disabled={busy}
               onClick={() => inputRef.current?.click()}
             >
-              {busy ? "Caricamento…" : "Sostituisci"}
+              {busy ? t("image.loading") : t("image.replace")}
             </button>
             <button
               type="button"
@@ -85,7 +87,7 @@ export function ImagePicker({
               }}
               onClick={() => onChange(null)}
             >
-              Rimuovi
+              {t("image.remove")}
             </button>
           </div>
         </div>
@@ -101,7 +103,7 @@ export function ImagePicker({
             <circle cx="8.5" cy="8.5" r="1.5" />
             <polyline points="21 15 16 10 5 21" />
           </svg>
-          {busy ? "Caricamento…" : "Aggiungi immagine"}
+          {busy ? t("image.loading") : t("image.add")}
         </button>
       )}
       {err && (
@@ -109,7 +111,7 @@ export function ImagePicker({
       )}
       {!err && image && (
         <p style={{ fontSize: 11.5, color: tokens.hint, marginTop: 6 }}>
-          Ridimensionata automaticamente per la partita.
+          {t("image.resizedNote")}
         </p>
       )}
     </div>

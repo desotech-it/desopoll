@@ -1,7 +1,8 @@
 // Question type picker shown when adding a new question.
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { type QuestionType } from "../../api";
-import { QUESTION_TYPES } from "../../questionTypes";
+import { QUESTION_TYPES, typeDesc, typeName } from "../../questionTypes";
 import { btnGhost, glass, glassSoft, tokens } from "../../ui";
 import { TypeIcon } from "../../typeIcons";
 
@@ -15,12 +16,13 @@ export function TypePicker({
   onPick: (t: QuestionType) => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation("editor");
   return (
     <div style={{ ...glass, padding: 20, marginBottom: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Scegli il tipo di domanda</h3>
+        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>{t("typePicker.heading")}</h3>
         <button style={btnGhost} onClick={onCancel} disabled={adding}>
-          Annulla
+          {t("common:actions.cancel")}
         </button>
       </div>
       <div
@@ -32,10 +34,10 @@ export function TypePicker({
           pointerEvents: adding ? "none" : "auto",
         }}
       >
-        {QUESTION_TYPES.map((t) => (
+        {QUESTION_TYPES.map((meta) => (
           <button
-            key={t.type}
-            onClick={() => onPick(t.type)}
+            key={meta.type}
+            onClick={() => onPick(meta.type)}
             style={{
               ...glassSoft,
               textAlign: "left",
@@ -47,9 +49,9 @@ export function TypePicker({
               font: "inherit",
             }}
           >
-            <TypeIcon type={t.type} size={40} />
-            <span style={{ fontSize: 14, fontWeight: 700, color: tokens.ink }}>{t.name}</span>
-            <span style={{ fontSize: 12.5, color: tokens.ink2, lineHeight: 1.5 }}>{t.desc}</span>
+            <TypeIcon type={meta.type} size={40} />
+            <span style={{ fontSize: 14, fontWeight: 700, color: tokens.ink }}>{typeName(meta.type)}</span>
+            <span style={{ fontSize: 12.5, color: tokens.ink2, lineHeight: 1.5 }}>{typeDesc(meta.type)}</span>
           </button>
         ))}
       </div>

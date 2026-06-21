@@ -1,5 +1,6 @@
 // Answer-spec editors (one per question type).
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { type AnswerSpec, type Option, type QuestionType } from "../../api";
 import { hasOptions, isOpenText, isTrueFalse, uuid } from "../../questionTypes";
 import { btnGhost, glassSoft, inputStyle, labelStyle, ShapeBadge, tokens } from "../../ui";
@@ -41,6 +42,7 @@ function OptionsEditor({
   spec: AnswerSpec;
   onChange: (next: AnswerSpec) => void;
 }) {
+  const { t } = useTranslation("editor");
   if (!hasOptions(spec)) return null;
   const options = spec.options;
   const correct = type === "poll" ? [] : spec.correct ?? [];
@@ -83,10 +85,10 @@ function OptionsEditor({
   return (
     <div>
       <label style={labelStyle}>
-        {isPoll ? "Opzioni del sondaggio" : "Opzioni di risposta"}
+        {isPoll ? t("answers.optionsPoll") : t("answers.optionsAnswer")}
         {!isPoll && (
           <span style={{ fontWeight: 400, color: tokens.ink3, marginLeft: 6 }}>
-            {isSingle ? "(seleziona la corretta)" : "(seleziona tutte le corrette)"}
+            {isSingle ? t("answers.selectCorrect") : t("answers.selectAllCorrect")}
           </span>
         )}
       </label>
@@ -111,14 +113,14 @@ function OptionsEditor({
               <input
                 value={o.text}
                 onChange={(e) => setOptionText(o.id, e.target.value)}
-                placeholder={`Opzione ${i + 1}`}
+                placeholder={t("answers.optionPlaceholder", { n: i + 1 })}
                 style={{ ...inputStyle, flex: 1 }}
               />
               {!isPoll && (
                 <button
                   type="button"
                   onClick={() => toggleCorrect(o.id)}
-                  title={isCorrect ? "Risposta corretta" : "Segna come corretta"}
+                  title={isCorrect ? t("answers.isCorrect") : t("answers.markCorrect")}
                   style={{
                     width: 32,
                     height: 32,
@@ -142,7 +144,7 @@ function OptionsEditor({
                 type="button"
                 onClick={() => removeOption(o.id)}
                 disabled={options.length <= 2}
-                title="Rimuovi opzione"
+                title={t("answers.removeOption")}
                 style={{
                   width: 32,
                   height: 32,
@@ -168,16 +170,16 @@ function OptionsEditor({
       </div>
       {options.length < 6 ? (
         <button style={{ ...btnGhost, marginTop: 12 }} onClick={addOption}>
-          + Aggiungi opzione
+          {t("answers.addOption")}
         </button>
       ) : (
         <p style={{ fontSize: 12, color: tokens.hint, marginTop: 10 }}>
-          Massimo 6 opzioni raggiunto.
+          {t("answers.maxOptions")}
         </p>
       )}
       {!isPoll && correct.length === 0 && (
         <p style={{ fontSize: 12, color: "#a03050", marginTop: 8 }}>
-          Seleziona almeno una risposta corretta.
+          {t("answers.needCorrect")}
         </p>
       )}
     </div>
@@ -185,14 +187,15 @@ function OptionsEditor({
 }
 
 function TrueFalseEditor({ spec, onChange }: { spec: AnswerSpec; onChange: (n: AnswerSpec) => void }) {
+  const { t } = useTranslation("editor");
   const value = isTrueFalse(spec) ? spec.correct : true;
   const opts: { v: boolean; label: string }[] = [
-    { v: true, label: "Vero" },
-    { v: false, label: "Falso" },
+    { v: true, label: t("answers.trueLabel") },
+    { v: false, label: t("answers.falseLabel") },
   ];
   return (
     <div>
-      <label style={labelStyle}>Risposta corretta</label>
+      <label style={labelStyle}>{t("answers.correctAnswer")}</label>
       <div style={{ display: "flex", gap: 10 }}>
         {opts.map((o, i) => {
           const active = value === o.v;
@@ -230,6 +233,7 @@ function TrueFalseEditor({ spec, onChange }: { spec: AnswerSpec; onChange: (n: A
 }
 
 function OpenTextEditor({ spec, onChange }: { spec: AnswerSpec; onChange: (n: AnswerSpec) => void }) {
+  const { t } = useTranslation("editor");
   const accepted = isOpenText(spec) ? spec.accepted : [];
   const caseSensitive = isOpenText(spec) ? Boolean(spec.caseSensitive) : false;
   const [draft, setDraft] = useState("");
@@ -251,7 +255,7 @@ function OpenTextEditor({ spec, onChange }: { spec: AnswerSpec; onChange: (n: An
 
   return (
     <div>
-      <label style={labelStyle}>Risposte accettate</label>
+      <label style={labelStyle}>{t("answers.acceptedAnswers")}</label>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         <input
           value={draft}
@@ -262,11 +266,11 @@ function OpenTextEditor({ spec, onChange }: { spec: AnswerSpec; onChange: (n: An
               commitDraft();
             }
           }}
-          placeholder="Digita una risposta accettata e premi Invio"
+          placeholder={t("answers.acceptedPlaceholder")}
           style={{ ...inputStyle, flex: 1, minWidth: 220 }}
         />
         <button type="button" style={btnGhost} onClick={commitDraft}>
-          Aggiungi
+          {t("common:actions.add")}
         </button>
       </div>
 
@@ -318,7 +322,7 @@ function OpenTextEditor({ spec, onChange }: { spec: AnswerSpec; onChange: (n: An
         <Toggle
           checked={caseSensitive}
           onChange={(v) => onChange({ accepted, caseSensitive: v })}
-          label="Distingui maiuscole/minuscole"
+          label={t("answers.caseSensitive")}
         />
       </div>
     </div>

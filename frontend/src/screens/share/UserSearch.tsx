@@ -2,12 +2,13 @@
 // picking a result invokes onPick and clears the query. Reused by the share
 // dialog and the groups admin screen (add-member flow).
 import React, { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { users, type UserSearchResult } from "../../api";
 import { glassSoft, inputStyle, tokens } from "../../ui";
 
 export function UserSearch({
   onPick,
-  placeholder = "Cerca per nome o email…",
+  placeholder,
   label,
   autoFocus,
 }: {
@@ -16,6 +17,8 @@ export function UserSearch({
   label?: string;
   autoFocus?: boolean;
 }) {
+  const { t } = useTranslation("share");
+  const resolvedPlaceholder = placeholder ?? t("userSearch.placeholder");
   const [q, setQ] = useState("");
   const [results, setResults] = useState<UserSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -66,8 +69,8 @@ export function UserSearch({
         autoFocus={autoFocus}
         onChange={(e) => setQ(e.target.value)}
         onFocus={() => results.length > 0 && setOpen(true)}
-        placeholder={placeholder}
-        aria-label={label ?? "Cerca utente"}
+        placeholder={resolvedPlaceholder}
+        aria-label={label ?? t("userSearch.aria")}
         style={inputStyle}
       />
       {open && q.trim().length >= 2 && (
@@ -85,10 +88,10 @@ export function UserSearch({
           }}
         >
           {searching && results.length === 0 ? (
-            <div style={{ padding: "10px 12px", fontSize: 13, color: tokens.hint }}>Ricerca…</div>
+            <div style={{ padding: "10px 12px", fontSize: 13, color: tokens.hint }}>{t("userSearch.searching")}</div>
           ) : results.length === 0 ? (
             <div style={{ padding: "10px 12px", fontSize: 13, color: tokens.hint }}>
-              Nessun utente trovato.
+              {t("userSearch.noResults")}
             </div>
           ) : (
             results.map((u) => (

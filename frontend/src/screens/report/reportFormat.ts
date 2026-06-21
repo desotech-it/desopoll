@@ -2,6 +2,7 @@
 // No DOM, no I/O → unit-tested. The backend already computes correctPct,
 // distributions and standings; these helpers only shape them for display.
 import type { ReportQuestionStat, ReportStanding, SessionReport } from "../../api";
+import i18n from "../../i18n";
 
 // Clamp + round a 0..100 percentage for display (guards NaN/Infinity → 0).
 export function pct(value: number): number {
@@ -9,10 +10,11 @@ export function pct(value: number): number {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
-// "12 / 20 hanno risposto" style answered fraction.
+// Localized "12 / 20 hanno risposto" style answered fraction (reuses the live
+// game's answeredPill key so host + report stay consistent across languages).
 export function answeredLabel(stat: ReportQuestionStat, playerCount: number): string {
   const total = Math.max(stat.answeredCount, playerCount);
-  return `${stat.answeredCount} / ${total} hanno risposto`;
+  return i18n.t("common.answeredPill", { ns: "game", count: stat.answeredCount, total }) as string;
 }
 
 // Whether a question type carries a notion of "correct" (so the correct % is

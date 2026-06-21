@@ -1,8 +1,10 @@
 // Landing / login card. Shown when GET /api/auth/me returns 401.
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { ApiError, auth } from "../api";
 import { useAuth } from "../auth";
+import { LanguageSelector } from "../i18n/LanguageSelector";
 import {
   BrandMark,
   btnGhost,
@@ -16,6 +18,7 @@ import {
 } from "../ui";
 
 export function Login() {
+  const { t } = useTranslation(["auth", "common"]);
   const { setUser } = useAuth();
   const [oidc, setOidc] = useState(false);
   const [email, setEmail] = useState("");
@@ -39,9 +42,9 @@ export function Login() {
       setUser(user);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
-        setError("Email o password non corretti.");
+        setError(t("login.errorBadCredentials"));
       } else {
-        setError(err instanceof Error ? err.message : "Accesso non riuscito.");
+        setError(err instanceof Error ? err.message : t("login.errorGeneric"));
       }
     } finally {
       setSubmitting(false);
@@ -59,11 +62,14 @@ export function Login() {
       }}
     >
       <div style={{ ...glass, padding: "36px 32px", maxWidth: 420, width: "100%" }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
+          <LanguageSelector />
+        </div>
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
           <BrandMark size={26} />
         </div>
         <p style={{ color: tokens.muted, margin: "0 0 26px", textAlign: "center", fontSize: 14 }}>
-          Quiz e sondaggi dal vivo
+          {t("common:brandTagline")}
         </p>
 
         {oidc && (
@@ -72,7 +78,7 @@ export function Login() {
               href="/api/auth/login"
               style={{ ...btnPrimary, width: "100%", padding: "13px", boxSizing: "border-box" }}
             >
-              Accedi con SSO
+              {t("login.sso")}
             </a>
             <div
               style={{
@@ -85,7 +91,7 @@ export function Login() {
               }}
             >
               <span style={{ flex: 1, height: 1, background: "rgba(124,108,224,0.18)" }} />
-              oppure
+              {t("login.or")}
               <span style={{ flex: 1, height: 1, background: "rgba(124,108,224,0.18)" }} />
             </div>
           </>
@@ -94,7 +100,7 @@ export function Login() {
         <form onSubmit={submit}>
           <div style={{ marginBottom: 14 }}>
             <label style={labelStyle} htmlFor="login-email">
-              Email
+              {t("login.emailLabel")}
             </label>
             <input
               id="login-email"
@@ -104,12 +110,12 @@ export function Login() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               style={inputStyle}
-              placeholder="nome@azienda.it"
+              placeholder={t("login.emailPlaceholder")}
             />
           </div>
           <div style={{ marginBottom: 16 }}>
             <label style={labelStyle} htmlFor="login-password">
-              Password
+              {t("login.passwordLabel")}
             </label>
             <input
               id="login-password"
@@ -141,7 +147,7 @@ export function Login() {
               cursor: submitting ? "default" : "pointer",
             }}
           >
-            {submitting ? "Accesso in corso…" : "Accedi"}
+            {submitting ? t("login.submitting") : t("login.submit")}
           </button>
         </form>
 
@@ -156,18 +162,18 @@ export function Login() {
           }}
         >
           <span style={{ flex: 1, height: 1, background: "rgba(124,108,224,0.18)" }} />
-          partecipanti
+          {t("login.participants")}
           <span style={{ flex: 1, height: 1, background: "rgba(124,108,224,0.18)" }} />
         </div>
         <Link
           to="/join"
           style={{ ...btnGhost, width: "100%", padding: "13px", boxSizing: "border-box", fontSize: 14 }}
         >
-          Partecipa con un PIN
+          {t("login.joinWithPin")}
         </Link>
 
         <p style={{ fontSize: 12, color: tokens.hint, marginTop: 22, textAlign: "center" }}>
-          Accesso riservato. Contatta un amministratore per un account.
+          {t("login.restricted")}
         </p>
       </div>
     </div>

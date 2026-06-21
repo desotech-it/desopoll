@@ -1,5 +1,5 @@
 // Router + app shell. Renders the login card when logged out, otherwise the shell.
-import React from "react";
+import React, { useEffect } from "react";
 import {
   BrowserRouter,
   Link,
@@ -8,7 +8,10 @@ import {
   Routes,
   useLocation,
 } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { AuthProvider, useAuth } from "./auth";
+import { LanguageSelector } from "./i18n/LanguageSelector";
+import { setLanguage } from "./i18n";
 import { Login } from "./screens/Login";
 import { Dashboard } from "./screens/Dashboard";
 import { QuizEditor } from "./screens/QuizEditor";
@@ -38,6 +41,14 @@ export function App() {
 
 function Root() {
   const { user, loading } = useAuth();
+  const { t } = useTranslation("common");
+
+  // When a logged-in user has a stored UI language preference, seed the active
+  // language from it (also persists to localStorage). The manual selector still
+  // overrides this afterwards.
+  useEffect(() => {
+    if (user?.ui_language) setLanguage(user.ui_language);
+  }, [user?.ui_language]);
 
   if (loading) {
     return (
@@ -49,7 +60,7 @@ function Root() {
           justifyContent: "center",
         }}
       >
-        <Spinner label="Caricamento…" />
+        <Spinner label={t("loading")} />
       </div>
     );
   }
@@ -109,6 +120,7 @@ function TopBar({
   userEmail: string;
   role: string;
 }) {
+  const { t } = useTranslation("common");
   const location = useLocation();
   const onDashboard = location.pathname === "/" || location.pathname.startsWith("/quiz");
   const onAdminUsers = location.pathname === "/admin/users" || location.pathname === "/admin";
@@ -131,29 +143,30 @@ function TopBar({
 
       <nav style={{ display: "flex", gap: 6, marginLeft: 12 }}>
         <NavLink to="/" active={onDashboard}>
-          Dashboard
+          {t("nav.dashboard")}
         </NavLink>
         {isAdmin && (
           <NavLink to="/admin/users" active={onAdminUsers}>
-            Admin
+            {t("nav.admin")}
           </NavLink>
         )}
         {isAdmin && (
           <NavLink to="/admin/groups" active={onAdminGroups}>
-            Gruppi
+            {t("nav.groups")}
           </NavLink>
         )}
       </nav>
 
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginLeft: "auto", flexWrap: "wrap" }}>
+        <LanguageSelector />
         <div style={{ textAlign: "right", lineHeight: 1.3 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: tokens.ink }}>{userEmail}</div>
           <div style={{ fontSize: 11.5, color: tokens.brandInk }}>
-            {role === "admin" ? "Amministratore" : "Utente"}
+            {role === "admin" ? t("roles.admin") : t("roles.user")}
           </div>
         </div>
         <button style={btnGhost} onClick={onLogout}>
-          Esci
+          {t("actions.logout")}
         </button>
       </div>
     </div>

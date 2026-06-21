@@ -4,6 +4,7 @@
 // payload contract: numeric/slider {value:number}, ordering {order:[id]},
 // word_cloud {text:string}.
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { btnPrimary, glassSoft, ShapeBadge, tokens } from "../../ui";
 import type { LiveOption, LiveQuestion } from "../../game/types";
 
@@ -25,6 +26,7 @@ const bigInput: React.CSSProperties = {
 
 // ---- numeric: { value:number } ----
 export function NumericInput({ onSubmit }: { onSubmit: (value: number) => void }) {
+  const { t } = useTranslation("game");
   const [raw, setRaw] = useState("");
   const value = Number(raw);
   const valid = raw.trim() !== "" && Number.isFinite(value);
@@ -43,11 +45,11 @@ export function NumericInput({ onSubmit }: { onSubmit: (value: number) => void }
         value={raw}
         onChange={(e) => setRaw(e.target.value)}
         placeholder="0"
-        aria-label="Risposta numerica"
+        aria-label={t("player.numericAria")}
         style={bigInput}
       />
       <button type="submit" style={{ ...btnPrimary, opacity: valid ? 1 : 0.6 }} disabled={!valid}>
-        Invia
+        {t("player.submit")}
       </button>
     </form>
   );
@@ -61,6 +63,7 @@ export function SliderInput({
   question: LiveQuestion;
   onSubmit: (value: number) => void;
 }) {
+  const { t } = useTranslation("game");
   const min = Number.isFinite(question.min) ? (question.min as number) : 0;
   const max = Number.isFinite(question.max) && (question.max as number) > min ? (question.max as number) : min + 100;
   const step = Number.isFinite(question.step) && (question.step as number) > 0 ? (question.step as number) : 1;
@@ -83,7 +86,7 @@ export function SliderInput({
         step={step}
         value={value}
         onChange={(e) => setValue(Number(e.target.value))}
-        aria-label="Valore"
+        aria-label={t("player.valueAria")}
         style={{ width: "100%", accentColor: "#8d83e4" }}
       />
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: tokens.ink3, fontWeight: 600 }}>
@@ -91,7 +94,7 @@ export function SliderInput({
         <span>{max}</span>
       </div>
       <button type="submit" style={btnPrimary}>
-        Invia
+        {t("player.submit")}
       </button>
     </form>
   );
@@ -105,6 +108,7 @@ export function OrderingInput({
   options: LiveOption[];
   onSubmit: (order: string[]) => void;
 }) {
+  const { t } = useTranslation("game");
   const [items, setItems] = useState<LiveOption[]>(options);
   function move(idx: number, dir: -1 | 1) {
     const j = idx + dir;
@@ -118,7 +122,7 @@ export function OrderingInput({
   if (items.length === 0) {
     return (
       <div style={{ ...glassSoft, padding: "18px 20px", color: tokens.muted, fontSize: 15 }}>
-        Nessun elemento da ordinare.
+        {t("player.noItems")}
       </div>
     );
   }
@@ -138,7 +142,7 @@ export function OrderingInput({
         ))}
       </div>
       <button style={{ ...btnPrimary, alignSelf: "flex-end" }} onClick={() => onSubmit(items.map((i) => i.id))}>
-        Conferma ordine
+        {t("player.confirmOrder")}
       </button>
     </div>
   );
@@ -153,12 +157,13 @@ function ArrowBtn({
   disabled: boolean;
   onClick: () => void;
 }) {
+  const { t } = useTranslation("game");
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      aria-label={dir === "up" ? "Sposta su" : "Sposta giù"}
+      aria-label={dir === "up" ? t("player.moveUp") : t("player.moveDown")}
       style={{
         width: 38,
         height: 38,
@@ -183,6 +188,7 @@ function ArrowBtn({
 
 // ---- word_cloud: { text:string } (survey, free word) ----
 export function WordCloudInput({ onSubmit }: { onSubmit: (text: string) => void }) {
+  const { t } = useTranslation("game");
   const [text, setText] = useState("");
   return (
     <form
@@ -196,13 +202,13 @@ export function WordCloudInput({ onSubmit }: { onSubmit: (text: string) => void 
         autoFocus
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="Scrivi una parola…"
-        aria-label="La tua parola"
+        placeholder={t("player.wordPlaceholder")}
+        aria-label={t("player.wordAria")}
         maxLength={40}
         style={bigInput}
       />
       <button type="submit" style={{ ...btnPrimary, opacity: text.trim() ? 1 : 0.6 }} disabled={!text.trim()}>
-        Invia
+        {t("player.submit")}
       </button>
     </form>
   );

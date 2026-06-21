@@ -2,6 +2,7 @@
 // numeric, slider, ordering, word_cloud. Split out of AnswerEditors.tsx to keep
 // every file well under 500 lines.
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { type AnswerSpec, type OrderingItem } from "../../api";
 import { isNumeric, isOrdering, isSlider, uuid } from "../../questionTypes";
 import { btnGhost, glassSoft, inputStyle, labelStyle, ShapeBadge, tokens } from "../../ui";
@@ -35,25 +36,26 @@ function Field({
 
 // ---- numeric: { answer, tolerance? } ----
 export function NumericEditor({ spec, onChange }: { spec: AnswerSpec; onChange: Change }) {
+  const { t } = useTranslation("editor");
   const answer = isNumeric(spec) ? spec.answer : 0;
   const tolerance = isNumeric(spec) ? spec.tolerance ?? 0 : 0;
   return (
     <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-      <Field label="Risposta corretta">
+      <Field label={t("answers.numericAnswer")}>
         <input
           type="number"
           value={answer}
-          aria-label="Risposta corretta"
+          aria-label={t("answers.numericAnswer")}
           onChange={(e) => onChange({ answer: num(e.target.value, 0), tolerance })}
           style={inputStyle}
         />
       </Field>
-      <Field label="Tolleranza (±)" hint="Una risposta è corretta se la differenza è ≤ tolleranza.">
+      <Field label={t("answers.tolerance")} hint={t("answers.toleranceHintNumeric")}>
         <input
           type="number"
           min={0}
           value={tolerance}
-          aria-label="Tolleranza"
+          aria-label={t("answers.toleranceAria")}
           onChange={(e) => onChange({ answer, tolerance: Math.max(0, num(e.target.value, 0)) })}
           style={inputStyle}
         />
@@ -64,6 +66,7 @@ export function NumericEditor({ spec, onChange }: { spec: AnswerSpec; onChange: 
 
 // ---- slider: { min, max, step?, answer, tolerance? } ----
 export function SliderEditor({ spec, onChange }: { spec: AnswerSpec; onChange: Change }) {
+  const { t } = useTranslation("editor");
   const s = isSlider(spec)
     ? spec
     : { min: 0, max: 100, step: 1, answer: 50, tolerance: 0 };
@@ -83,51 +86,51 @@ export function SliderEditor({ spec, onChange }: { spec: AnswerSpec; onChange: C
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-        <Field label="Minimo">
+        <Field label={t("answers.min")}>
           <input
             type="number"
             value={s.min}
-            aria-label="Minimo"
+            aria-label={t("answers.min")}
             onChange={(e) => patch({ min: num(e.target.value, 0) })}
             style={inputStyle}
           />
         </Field>
-        <Field label="Massimo">
+        <Field label={t("answers.max")}>
           <input
             type="number"
             value={s.max}
-            aria-label="Massimo"
+            aria-label={t("answers.max")}
             onChange={(e) => patch({ max: num(e.target.value, 100) })}
             style={inputStyle}
           />
         </Field>
-        <Field label="Passo (step)">
+        <Field label={t("answers.step")}>
           <input
             type="number"
             min={1}
             value={step}
-            aria-label="Passo"
+            aria-label={t("answers.stepAria")}
             onChange={(e) => patch({ step: Math.max(1, num(e.target.value, 1)) })}
             style={inputStyle}
           />
         </Field>
       </div>
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-        <Field label="Risposta corretta">
+        <Field label={t("answers.numericAnswer")}>
           <input
             type="number"
             value={s.answer}
-            aria-label="Risposta corretta"
+            aria-label={t("answers.numericAnswer")}
             onChange={(e) => patch({ answer: num(e.target.value, s.min) })}
             style={inputStyle}
           />
         </Field>
-        <Field label="Tolleranza (±)" hint="Corretta se entro questa distanza dal valore.">
+        <Field label={t("answers.tolerance")} hint={t("answers.toleranceHintSlider")}>
           <input
             type="number"
             min={0}
             value={tolerance}
-            aria-label="Tolleranza"
+            aria-label={t("answers.toleranceAria")}
             onChange={(e) => patch({ tolerance: Math.max(0, num(e.target.value, 0)) })}
             style={inputStyle}
           />
@@ -135,7 +138,7 @@ export function SliderEditor({ spec, onChange }: { spec: AnswerSpec; onChange: C
       </div>
       {invalidRange && (
         <p style={{ fontSize: 12, color: "#a03050", margin: 0 }}>
-          Il massimo deve essere maggiore del minimo.
+          {t("answers.invalidRange")}
         </p>
       )}
     </div>
@@ -144,6 +147,7 @@ export function SliderEditor({ spec, onChange }: { spec: AnswerSpec; onChange: C
 
 // ---- ordering: { items:[{id,text}], correctOrder:[id,...] } ----
 export function OrderingEditor({ spec, onChange }: { spec: AnswerSpec; onChange: Change }) {
+  const { t } = useTranslation("editor");
   if (!isOrdering(spec)) return null;
   const items = spec.items;
   // The author edits items in their CORRECT order, so the visible order is the
@@ -180,9 +184,9 @@ export function OrderingEditor({ spec, onChange }: { spec: AnswerSpec; onChange:
   return (
     <div>
       <label style={labelStyle}>
-        Elementi in ordine corretto
+        {t("answers.orderedItems")}
         <span style={{ fontWeight: 400, color: tokens.ink3, marginLeft: 6 }}>
-          (usa le frecce per riordinarli)
+          {t("answers.orderedHint")}
         </span>
       </label>
       <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 4 }}>
@@ -195,8 +199,8 @@ export function OrderingEditor({ spec, onChange }: { spec: AnswerSpec; onChange:
             <input
               value={it.text}
               onChange={(e) => setText(it.id, e.target.value)}
-              placeholder={`Elemento ${i + 1}`}
-              aria-label={`Elemento ${i + 1}`}
+              placeholder={t("answers.itemPlaceholder", { n: i + 1 })}
+              aria-label={t("answers.itemPlaceholder", { n: i + 1 })}
               style={{ ...inputStyle, flex: 1 }}
             />
             <ReorderButton dir="up" disabled={i === 0} onClick={() => move(i, -1)} />
@@ -205,7 +209,7 @@ export function OrderingEditor({ spec, onChange }: { spec: AnswerSpec; onChange:
               type="button"
               onClick={() => remove(it.id)}
               disabled={ordered.length <= 2}
-              title="Rimuovi elemento"
+              title={t("answers.removeItem")}
               style={{
                 width: 32,
                 height: 32,
@@ -230,10 +234,10 @@ export function OrderingEditor({ spec, onChange }: { spec: AnswerSpec; onChange:
       </div>
       {ordered.length < 6 ? (
         <button style={{ ...btnGhost, marginTop: 12 }} onClick={add}>
-          + Aggiungi elemento
+          {t("answers.addItem")}
         </button>
       ) : (
-        <p style={{ fontSize: 12, color: tokens.hint, marginTop: 10 }}>Massimo 6 elementi raggiunto.</p>
+        <p style={{ fontSize: 12, color: tokens.hint, marginTop: 10 }}>{t("answers.maxItems")}</p>
       )}
     </div>
   );
@@ -248,13 +252,15 @@ function ReorderButton({
   disabled: boolean;
   onClick: () => void;
 }) {
+  const { t } = useTranslation("editor");
+  const label = dir === "up" ? t("answers.moveUp") : t("answers.moveDown");
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      title={dir === "up" ? "Sposta su" : "Sposta giù"}
-      aria-label={dir === "up" ? "Sposta su" : "Sposta giù"}
+      title={label}
+      aria-label={label}
       style={{
         width: 32,
         height: 32,
@@ -279,17 +285,16 @@ function ReorderButton({
 
 // ---- word_cloud: survey, no scoring. Just an explanatory note. ----
 export function WordCloudEditor() {
+  const { t } = useTranslation("editor");
   return (
     <div style={{ ...glassSoft, padding: "16px 18px", display: "flex", gap: 12, alignItems: "flex-start" }}>
       <div style={{ fontSize: 22, lineHeight: 1 }}>💬</div>
       <div>
         <div style={{ fontWeight: 700, color: tokens.ink, fontSize: 14, marginBottom: 4 }}>
-          Nuvola di parole (sondaggio)
+          {t("answers.wordCloudTitle")}
         </div>
         <p style={{ color: tokens.ink2, fontSize: 13, margin: 0, lineHeight: 1.5 }}>
-          I partecipanti scrivono una parola libera. Non c'è una risposta corretta:
-          le parole più frequenti vengono aggregate e mostrate nei risultati.
-          Nessuna configurazione necessaria.
+          {t("answers.wordCloudBody")}
         </p>
       </div>
     </div>

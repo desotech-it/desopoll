@@ -1,6 +1,7 @@
 // Shared presentational pieces for the live game (host + player screens).
 // Pure-ish: props in, JSX out. Inline styles, reusing the ui.tsx tokens.
 import React from "react";
+import { useTranslation } from "react-i18next";
 import {
   glass,
   glassSoft,
@@ -67,11 +68,12 @@ export function QuestionHeader({
   question: LiveQuestion;
   right?: React.ReactNode;
 }) {
+  const { t } = useTranslation("game");
   return (
     <div style={{ ...glass, padding: "20px 22px", marginBottom: 16 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14 }}>
         <div style={{ fontSize: 12.5, fontWeight: 600, color: tokens.brandInk }}>
-          Domanda {question.index + 1} di {question.total}
+          {t("common.questionProgress", { current: question.index + 1, total: question.total })}
         </div>
         {right}
       </div>
@@ -104,6 +106,7 @@ export function QuestionImage({
 
 // Answered count pill: "12 / 20 hanno risposto".
 export function AnsweredPill({ count, total }: { count: number; total: number }) {
+  const { t } = useTranslation("game");
   return (
     <span
       style={{
@@ -116,7 +119,7 @@ export function AnsweredPill({ count, total }: { count: number; total: number })
         whiteSpace: "nowrap",
       }}
     >
-      {count} / {total} hanno risposto
+      {t("common.answeredPill", { count, total })}
     </span>
   );
 }
@@ -193,9 +196,10 @@ export function Leaderboard({
   highlightId?: string | null;
   limit?: number;
 }) {
+  const { t } = useTranslation("game");
   const shown = limit ? rows.slice(0, limit) : rows;
   if (shown.length === 0) {
-    return <p style={{ color: tokens.muted, fontSize: 14, margin: 0 }}>Nessun punteggio ancora.</p>;
+    return <p style={{ color: tokens.muted, fontSize: 14, margin: 0 }}>{t("common.noScoresYet")}</p>;
   }
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -216,7 +220,7 @@ export function Leaderboard({
             <span style={{ width: 26, fontWeight: 800, color: tokens.brandInk }}>{r.rank}</span>
             <span style={{ flex: 1, fontWeight: 600, color: tokens.ink }}>
               {r.nickname}
-              {me && <span style={{ color: tokens.brandInk, fontWeight: 700 }}> (tu)</span>}
+              {me && <span style={{ color: tokens.brandInk, fontWeight: 700 }}>{t("common.you")}</span>}
             </span>
             <span style={{ fontWeight: 800, color: tokens.ink2 }}>{r.score}</span>
           </div>

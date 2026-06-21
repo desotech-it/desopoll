@@ -4,6 +4,7 @@
 // dialog opens for manageable quizzes.
 import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { ApiError, quizzes, sessions, type Quiz } from "../api";
 import { canEdit, canManage, canPlay } from "../permissions";
 import {
@@ -21,6 +22,7 @@ import { ShareDialog } from "./share/ShareDialog";
 import { useAuth } from "../auth";
 
 export function Dashboard() {
+  const { t } = useTranslation("dashboard");
   const navigate = useNavigate();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
@@ -37,10 +39,10 @@ export function Dashboard() {
       const { quizzes: qs } = await quizzes.list();
       setList(qs);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Errore nel caricamento dei quiz.");
+      setError(e instanceof Error ? e.message : t("errorLoad"));
       setList([]);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void load();
@@ -57,7 +59,7 @@ export function Dashboard() {
       setCreating(false);
       navigate(`/quiz/${quiz.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Creazione del quiz non riuscita.");
+      setError(err instanceof Error ? err.message : t("errorCreate"));
     } finally {
       setBusy(false);
     }
@@ -68,18 +70,18 @@ export function Dashboard() {
       const { id } = await sessions.create(q.id);
       navigate(`/host/${id}`);
     } catch (err) {
-      const msg = err instanceof ApiError ? err.message : "Avvio della partita non riuscito.";
+      const msg = err instanceof ApiError ? err.message : t("errorLaunch");
       window.alert(msg);
     }
   }
 
   async function deleteQuiz(q: Quiz) {
-    if (!window.confirm(`Eliminare il quiz "${q.title}"? L'operazione non è reversibile.`)) return;
+    if (!window.confirm(t("confirmDelete", { title: q.title }))) return;
     try {
       await quizzes.remove(q.id);
       setList((prev) => (prev ? prev.filter((x) => x.id !== q.id) : prev));
     } catch (err) {
-      const msg = err instanceof ApiError ? err.message : "Eliminazione non riuscita.";
+      const msg = err instanceof ApiError ? err.message : t("errorDelete");
       window.alert(msg);
     }
   }
@@ -91,7 +93,7 @@ export function Dashboard() {
       await load(); // refresh so the copy + exact counts/timestamps appear
       navigate(`/quiz/${quiz.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Duplicazione del quiz non riuscita.");
+      setError(err instanceof Error ? err.message : t("errorDuplicate"));
     }
   }
 
@@ -128,15 +130,15 @@ export function Dashboard() {
         }}
       >
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, margin: "0 0 4px" }}>I tuoi quiz</h1>
+          <h1 style={{ fontSize: 24, fontWeight: 700, margin: "0 0 4px" }}>{t("title")}</h1>
           <p style={{ color: tokens.muted, margin: 0, fontSize: 14 }}>
-            {list ? `${owned.length} quiz nella tua libreria` : "Libreria quiz"}
+            {list ? t("libraryCount", { count: owned.length }) : t("libraryFallback")}
           </p>
         </div>
         {!creating && (
           <button style={btnPrimary} onClick={() => setCreating(true)}>
             <PlusIcon />
-            Nuovo quiz
+            {t("newQuiz")}
           </button>
         )}
       </div>
@@ -144,18 +146,18 @@ export function Dashboard() {
       {creating && (
         <form onSubmit={createQuiz} style={{ ...glass, padding: 18, marginBottom: 22 }}>
           <label style={{ fontSize: 12.5, fontWeight: 600, color: tokens.ink2, display: "block", marginBottom: 8 }}>
-            Titolo del nuovo quiz
+            {t("newQuizTitleLabel")}
           </label>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <input
               autoFocus
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="Es. AWS Solutions Architect — Capitolo 1"
+              placeholder={t("newQuizPlaceholder")}
               style={{ ...inputStyle, flex: 1, minWidth: 220 }}
             />
             <button type="submit" disabled={busy || !newTitle.trim()} style={{ ...btnPrimary, opacity: busy || !newTitle.trim() ? 0.6 : 1 }}>
-              {busy ? "Creazione…" : "Crea e modifica"}
+              {busy ? t("creating") : t("createAndEdit")}
             </button>
             <button
               type="button"
@@ -165,7 +167,7 @@ export function Dashboard() {
                 setNewTitle("");
               }}
             >
-              Annulla
+              {t("common:actions.cancel")}
             </button>
           </div>
         </form>
@@ -179,7 +181,7 @@ export function Dashboard() {
 
       {list === null ? (
         <div style={{ ...glass, padding: 8 }}>
-          <Spinner label="Caricamento dei quiz…" />
+          <Spinner label={t("loadingQuizzes")} />
         </div>
       ) : owned.length === 0 && shared.length === 0 ? (
         <EmptyState onCreate={() => setCreating(true)} />
@@ -193,9 +195,9 @@ export function Dashboard() {
 
           {shared.length > 0 && (
             <section style={{ marginTop: 34 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 4px" }}>Condivisi con me</h2>
+              <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 4px" }}>{t("sharedWithMe")}</h2>
               <p style={{ color: tokens.muted, margin: "0 0 16px", fontSize: 13.5 }}>
-                {shared.length} quiz condivisi da altri utenti
+                {t("sharedCount", { count: shared.length })}
               </p>
               <CardGrid>{shared.map(renderCard)}</CardGrid>
             </section>
@@ -239,30 +241,28 @@ function PlusIcon() {
 }
 
 function EmptyState({ onCreate }: { onCreate: () => void }) {
+  const { t } = useTranslation("dashboard");
   return (
     <div style={{ ...glassSoft, borderRadius: 22, padding: "48px 24px", textAlign: "center" }}>
       <div style={{ fontSize: 40, marginBottom: 10 }}>✨</div>
-      <h2 style={{ fontSize: 19, fontWeight: 700, margin: "0 0 6px" }}>Nessun quiz, per ora</h2>
-      <p style={{ color: tokens.muted, margin: "0 0 20px", fontSize: 14 }}>
-        Crea il tuo primo quiz e inizia ad aggiungere domande in stile Kahoot.
-      </p>
+      <h2 style={{ fontSize: 19, fontWeight: 700, margin: "0 0 6px" }}>{t("emptyTitle")}</h2>
+      <p style={{ color: tokens.muted, margin: "0 0 20px", fontSize: 14 }}>{t("emptyBody")}</p>
       <button style={btnPrimary} onClick={onCreate}>
         <PlusIcon />
-        Crea il primo quiz
+        {t("emptyCreate")}
       </button>
     </div>
   );
 }
 
 function EmptyOwned({ onCreate }: { onCreate: () => void }) {
+  const { t } = useTranslation("dashboard");
   return (
     <div style={{ ...glassSoft, borderRadius: 22, padding: "32px 24px", textAlign: "center" }}>
-      <p style={{ color: tokens.muted, margin: "0 0 16px", fontSize: 14 }}>
-        Non hai ancora creato quiz tuoi.
-      </p>
+      <p style={{ color: tokens.muted, margin: "0 0 16px", fontSize: 14 }}>{t("emptyOwnedBody")}</p>
       <button style={btnPrimary} onClick={onCreate}>
         <PlusIcon />
-        Crea un quiz
+        {t("emptyOwnedCreate")}
       </button>
     </div>
   );
