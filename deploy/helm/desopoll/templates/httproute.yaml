@@ -6,8 +6,11 @@ metadata:
     app.kubernetes.io/part-of: desopoll
 spec:
   parentRefs:
+    # Attach to the gateway's HTTPS listener by port (catch-all gateway model). The hostname
+    # below selects the right virtual host; TLS/cert stays infra-side on the gateway listener.
     - name: {{ .Values.gateway.name }}
       namespace: {{ .Values.gateway.namespace }}
+      port: 443
   hostnames:
     - {{ .Values.hostname | quote }}
   rules:
@@ -38,3 +41,26 @@ spec:
         - name: desopoll-backend
           port: 8080
 {{- end }}
+---
+# HTTP (port 80) → HTTPS redirect. Under the catch-all gateway, port 80 is for redirects only
+# (the app is served on 443 above). cert-manager's ACME solver route keeps precedence on its
+# specific /.well-known/acme-challenge path, so certificate issuance/renewal is unaffected.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: desopoll-redirect
+  labels:
+    app.kubernetes.io/part-of: desopoll
+spec:
+  parentRefs:
+    - name: {{ .Values.gateway.name }}
+      namespace: {{ .Values.gateway.namespace }}
+      port: 80
+  hostnames:
+    - {{ .Values.hostname | quote }}
+  rules:
+    - filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301
