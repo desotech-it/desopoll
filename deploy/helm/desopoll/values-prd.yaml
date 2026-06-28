@@ -1,0 +1,50 @@
+acme:
+  email: admin@desotech.io
+appBaseUrl: https://poll.deso.tech
+backend:
+  corsOrigins: https://poll.deso.tech
+  enabled: true
+  replicas: 1
+db:
+  cluster: desopoll-db
+  database: desopoll
+  image: ghcr.io/cloudnative-pg/postgresql:16
+  instances: 1
+  mode: managed
+  owner: desopoll
+  storageClass: longhorn
+  storageSize: 2Gi
+echo:
+  enabled: false
+  image: nginx:alpine
+  replicas: 1
+frontend:
+  enabled: true
+  replicas: 1
+gateway:
+  className: cilium
+  mode: attach
+  name: labplatform
+  namespace: desolabs-labplatform
+hostname: poll.deso.tech
+image:
+  pullPolicy: Always
+  pullSecrets:
+    - r-deso-tech
+  registry: r.deso.tech/desopoll
+  tag: 75df8c9
+oidc:
+  adminGroup: desopoll-admins
+  enabled: true
+  groupsClaim: groups
+  issuer: https://auth.deso.tech/application/o/desopoll/
+  scopes: openid email profile
+  secretName: desopoll-oidc
+redis:
+  enabled: true
+  image: redis:7-alpine
+session:
+  secretName: desopoll-session
+tls:
+  issuer: prod
+  secretName: poll-deso-tech-tls
