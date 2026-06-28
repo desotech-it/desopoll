@@ -25,7 +25,7 @@ gateway:
   className: cilium
   mode: attach
   name: labplatform
-  namespace: desolabs-labplatform
+  namespace: shared-infra
 hostname: poll.deso.tech
 image:
   pullPolicy: Always
