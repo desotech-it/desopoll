@@ -6,7 +6,7 @@ gateway:
   # "dedicated" = create our own Gateway (needs the edge to route to its own IP).
   mode: attach
   name: labplatform
-  namespace: desolabs-labplatform
+  namespace: shared-infra
   className: cilium # only used in "dedicated" mode
 
 tls:
